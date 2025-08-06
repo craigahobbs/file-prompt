@@ -16,47 +16,71 @@ def main(argv=None):
 
     # Command line arguments
     parser = argparse.ArgumentParser(prog='file-prompt')
-    parser.add_argument('file', metavar='FILE', nargs='*',
-                        help='the files to include in the prompt')
-    parser.add_argument('-p', '--prompt', metavar='MSG',
-                        help='the prompt message text')
-    parser.add_argument('-s', '--suffix', metavar='MSG',
-                        help='the prompt suffix message text')
-    parser.add_argument('-d', '--dir', metavar='DIR', action='append',
-                        help='the directories to include in the prompt')
-    parser.add_argument('-l', '--depth', metavar='N', type=int, default=2,
-                        help='the maximum directory depth (default is 2)')
+    parser.add_argument('-p', '--prompt', dest='items', action=TypedItemAction,
+                        help='add the prompt message')
+    parser.add_argument('-f', '--file', dest='items', action=TypedItemAction,
+                        help='add the file')
+    parser.add_argument('-d', '--dir', dest='items', action=TypedItemAction,
+                        help='add the directory')
+    parser.add_argument('-l', '--depth', metavar='N', type=int, default=3,
+                        help='the maximum directory depth (default is 3)')
     parser.add_argument('-x', '--ext', metavar='EXT', action='append',
                         help='include files with the extension')
     args = parser.parse_args(args=argv)
 
-    # The prompt prefix
-    if args.prompt:
-        print(args.prompt)
+    # Output the prompt items
+    first = True
+    for item_type, item_str in args.items:
 
-    # Include the files
-    if args.file:
-        for file_path in args.file:
-            print()
+        # Prompt message?
+        if item_type == 'p':
+            if first:
+                first = False
+            else:
+                print()
+            print(item_str)
+
+        # File include?
+        elif item_type == 'f':
+            file_path = item_str
+            if first:
+                first = False
+            else:
+                print()
             print(f'<{file_path}>')
             with open(file_path, 'r', encoding='utf-8') as file_file:
-                print(file_file.read())
+                file_text = file_file.read().strip()
+                if file_text:
+                    print(file_text)
             print(f'</{file_path}>')
 
-    # Include the directories
-    if args.dir:
-        for dir_path in args.dir:
+        # Directory include?
+        elif item_type == 'd':
+            dir_path = item_str
             for file_path in sorted(_get_directory_files(dir_path, args.depth, args.ext)):
-                print()
+                if first:
+                    first = False
+                else:
+                    print()
                 print(f'<{file_path}>')
                 with open(file_path, 'r', encoding='utf-8') as file_file:
-                    print(file_file.read())
+                    file_text = file_file.read().strip()
+                    if file_text:
+                        print(file_text)
                 print(f'</{file_path}>')
 
-    # The prompt suffix
-    if args.suffix:
-        print()
-        print(args.suffix)
+
+class TypedItemAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        # Initialize the destination list if it doesn't exist
+        if not hasattr(namespace, self.dest) or getattr(namespace, self.dest) is None:
+            setattr(namespace, self.dest, [])
+
+        # Get type_id from the option string (e.g., '-p' -> 'p')
+        type_id = option_string.lstrip('-')[:1]
+
+        # Append tuple (type_id, value)
+        getattr(namespace, self.dest).append((type_id, values))
 
 
 # Helper enumerator to recursively get a directory's files
