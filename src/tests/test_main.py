@@ -18,6 +18,10 @@ class TestMain(unittest.TestCase):
     def test_main(self):
         with patch('sys.stdout', StringIO()) as stdout, \
              patch('sys.stderr', StringIO()) as stderr:
-            main(['1', '2', '3', '4'])
-        self.assertEqual(stdout.getvalue(), 'The sum is 10.0\n')
+            main(['-m', 'Hello', '-m', 'Goodbye'])
+        self.assertEqual(stdout.getvalue(), '''\
+Hello
+
+Goodbye
+''')
         self.assertEqual(stderr.getvalue(), '')
