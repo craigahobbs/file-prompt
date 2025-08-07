@@ -6,7 +6,10 @@ file-prompt command-line script main module
 """
 
 import argparse
+import json
 import os
+
+import schema_markdown
 
 
 def main(argv=None):
@@ -16,6 +19,8 @@ def main(argv=None):
 
     # Command line arguments
     parser = argparse.ArgumentParser(prog='file-prompt')
+    parser.add_argument('-c', '--config',
+                        help='the file-prompt config path')
     parser.add_argument('-p', '--prompt', dest='items', action=TypedItemAction,
                         help='add the prompt message')
     parser.add_argument('-f', '--file', dest='items', action=TypedItemAction,
@@ -24,28 +29,35 @@ def main(argv=None):
                         help='add the directory')
     parser.add_argument('-l', '--depth', metavar='N', type=int, default=3,
                         help='the maximum directory depth (default is 3)')
-    parser.add_argument('-x', '--ext', metavar='EXT', action='append',
+    parser.add_argument('-x', '--ext', metavar='EXT', action='append', default=[],
                         help='include files with the extension')
     args = parser.parse_args(args=argv)
 
+    # Load the config file
+    if args.config:
+        with open(args.config, 'r', encoding='utf-8') as config_file:
+            config = json.load(config_file)
+    else:
+        config = {'items': []}
+        items = args.items or []
+        for item_type, item_str in items:
+            if item_type == 'f':
+                config['items'].append({'file': item_str})
+            elif item_type == 'd':
+                config['items'].append({'dir': {'path': item_str, 'exts': args.ext, 'depth': args.depth}})
+            elif item_type == 'u':
+                config['items'].append({'url': item_str})
+            else: # if item_type == 'p':
+                config['items'].append({'message': item_str})
+    schema_markdown.validate_type(FILE_PROMPT_TYPES, 'FilePromptConfig', config)
+
     # Output the prompt items
-    first = True
-    for item_type, item_str in args.items:
+    for ix_item, item in enumerate(config['items']):
 
-        # Prompt message?
-        if item_type == 'p':
-            if first:
-                first = False
-            else:
-                print()
-            print(item_str)
-
-        # File include?
-        elif item_type == 'f':
-            file_path = item_str
-            if first:
-                first = False
-            else:
+        # File item
+        if 'file' in item:
+            file_path = item['file']
+            if ix_item != 0:
                 print()
             print(f'<{file_path}>')
             with open(file_path, 'r', encoding='utf-8') as file_file:
@@ -54,13 +66,13 @@ def main(argv=None):
                     print(file_text)
             print(f'</{file_path}>')
 
-        # Directory include?
-        elif item_type == 'd':
-            dir_path = item_str
-            for file_path in sorted(_get_directory_files(dir_path, args.depth, args.ext)):
-                if first:
-                    first = False
-                else:
+        # Directory item
+        elif 'dir' in item:
+            dir_path = item['dir']['path']
+            dir_exts = [f'.{ext.lstrip(".")}' for ext in item['dir'].get('exts') or []]
+            dir_depth = item['dir'].get('depth', 0)
+            for file_path in sorted(_get_directory_files(dir_path, dir_exts, dir_depth)):
+                if ix_item != 0:
                     print()
                 print(f'<{file_path}>')
                 with open(file_path, 'r', encoding='utf-8') as file_file:
@@ -68,6 +80,55 @@ def main(argv=None):
                     if file_text:
                         print(file_text)
                 print(f'</{file_path}>')
+
+        # URL item
+        elif 'url' in item:
+            if ix_item != 0:
+                print()
+
+        # Message item
+        else: # if 'message' in item:
+            if ix_item != 0:
+                print()
+            print(item['message'])
+
+
+FILE_PROMPT_TYPES = schema_markdown.parse_schema_markdown('''\
+# The file-prompt configuration file format
+struct FilePromptConfig
+
+    # The list of prompt items
+    FilePromptItem[len > 0] items
+
+
+# A prompt item
+union FilePromptItem
+
+    # A prompt message
+    string message
+
+    # File include POSIX path
+    string file
+
+    # Directory include
+    FilePromptDir dir
+
+    # URL include
+    string url
+
+
+# A directory include item
+struct FilePromptDir
+
+    # The directory POSIX path
+    string path
+
+    # The file extensions to include (e.g. ".py")
+    string[len >= 0] exts
+
+    # The directory traversal depth (default is 0, infinite)
+    optional int(>= 0) depth
+''')
 
 
 class TypedItemAction(argparse.Action):
@@ -84,9 +145,9 @@ class TypedItemAction(argparse.Action):
 
 
 # Helper enumerator to recursively get a directory's files
-def _get_directory_files(dir_name, max_depth, file_exts, current_depth=0):
+def _get_directory_files(dir_name, file_exts, max_depth=0, current_depth=0):
     # Recursion too deep?
-    if current_depth > max_depth:
+    if max_depth > 0 and current_depth > max_depth:
         return
 
     # Scan the directory for files
@@ -97,4 +158,4 @@ def _get_directory_files(dir_name, max_depth, file_exts, current_depth=0):
                 yield file_path
         elif entry.is_dir(): # pragma: no branch
             dir_path = os.path.join(dir_name, entry.name)
-            yield from _get_directory_files(dir_path, max_depth, file_exts, current_depth + 1)
+            yield from _get_directory_files(dir_path, file_exts, max_depth, current_depth + 1)
