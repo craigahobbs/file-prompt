@@ -22,17 +22,23 @@ def main(argv=None):
     parser = argparse.ArgumentParser(prog='file-prompt')
     parser.add_argument('-c', '--config',
                         help='the file-prompt config path')
-    parser.add_argument('-p', '--prompt', dest='items', action=TypedItemAction,
+    parser.add_argument('-g', '--config-help', action='store_true',
+                        help='display the file-prompt config file format')
+    parser.add_argument('-m', '--message', metavar='TEXT', dest='items', action=TypedItemAction,
                         help='add the prompt message')
-    parser.add_argument('-f', '--file', dest='items', action=TypedItemAction,
-                        help='add the file')
-    parser.add_argument('-d', '--dir', dest='items', action=TypedItemAction,
-                        help='add the directory')
-    parser.add_argument('-l', '--depth', metavar='N', type=int, default=0,
-                        help='the maximum directory depth (default is 0)')
+    parser.add_argument('-u', '--url', metavar='URL', dest='items', action=TypedItemAction,
+                        help='include the URL')
+    parser.add_argument('-f', '--file', metavar='PATH', dest='items', action=TypedItemAction,
+                        help='include the file')
+    parser.add_argument('-d', '--dir', metavar='PATH', dest='items', action=TypedItemAction,
+                        help="include a directory's files")
     parser.add_argument('-x', '--ext', metavar='EXT', action='append', default=[],
                         help='include files with the extension')
+    parser.add_argument('-l', '--depth', metavar='N', type=int, default=0,
+                        help='the maximum directory depth (default is 0)')
     args = parser.parse_args(args=argv)
+    if args.config_help:
+        parser.exit(status=2, message=FILE_PROMPT_SMD)
 
     # Load the config file
     if args.config:
@@ -47,7 +53,7 @@ def main(argv=None):
                 config['items'].append({'dir': {'path': item_str, 'exts': args.ext, 'depth': args.depth}})
             elif item_type == 'u':
                 config['items'].append({'url': item_str})
-            else: # if item_type == 'p':
+            else: # if item_type == 'm':
                 config['items'].append({'message': item_str})
     schema_markdown.validate_type(FILE_PROMPT_TYPES, 'FilePromptConfig', config)
 
@@ -120,7 +126,7 @@ class TypedItemAction(argparse.Action):
         getattr(namespace, self.dest).append((type_id, values))
 
 
-FILE_PROMPT_TYPES = schema_markdown.parse_schema_markdown('''\
+FILE_PROMPT_SMD = '''\
 # The file-prompt configuration file format
 struct FilePromptConfig
 
@@ -158,7 +164,8 @@ struct FilePromptDir
 
     # The directory traversal depth (default is 0, infinite)
     optional int(>= 0) depth
-''')
+'''
+FILE_PROMPT_TYPES = schema_markdown.parse_schema_markdown(FILE_PROMPT_SMD)
 
 
 # Helper enumerator to recursively get a directory's files
