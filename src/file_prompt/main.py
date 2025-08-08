@@ -20,12 +20,12 @@ def main(argv=None):
 
     # Command line arguments
     parser = argparse.ArgumentParser(prog='file-prompt')
-    parser.add_argument('-c', '--config',
-                        help='the file-prompt config path')
     parser.add_argument('-g', '--config-help', action='store_true',
                         help='display the file-prompt config file format')
+    parser.add_argument('-c', '--config', metavar='PATH', dest='items', action=TypedItemAction,
+                        help='include the file-prompt config')
     parser.add_argument('-m', '--message', metavar='TEXT', dest='items', action=TypedItemAction,
-                        help='add the prompt message')
+                        help='include the prompt message')
     parser.add_argument('-u', '--url', metavar='URL', dest='items', action=TypedItemAction,
                         help='include the URL')
     parser.add_argument('-f', '--file', metavar='PATH', dest='items', action=TypedItemAction,
@@ -41,27 +41,37 @@ def main(argv=None):
         parser.exit(status=2, message=FILE_PROMPT_SMD)
 
     # Load the config file
-    if args.config:
-        with open(args.config, 'r', encoding='utf-8') as config_file:
-            config = json.load(config_file)
-    else:
-        config = {'items': []}
-        for item_type, item_str in (args.items or []):
-            if item_type == 'f':
-                config['items'].append({'file': item_str})
-            elif item_type == 'd':
-                config['items'].append({'dir': {'path': item_str, 'exts': args.ext, 'depth': args.depth}})
-            elif item_type == 'u':
-                config['items'].append({'url': item_str})
-            else: # if item_type == 'm':
-                config['items'].append({'message': item_str})
+    config = {'items': []}
+    for item_type, item_str in (args.items or []):
+        if item_type == 'c':
+            config['items'].append({'config': item_str})
+        elif item_type == 'f':
+            config['items'].append({'file': item_str})
+        elif item_type == 'd':
+            config['items'].append({'dir': {'path': item_str, 'exts': args.ext, 'depth': args.depth}})
+        elif item_type == 'u':
+            config['items'].append({'url': item_str})
+        else: # if item_type == 'm':
+            config['items'].append({'message': item_str})
     schema_markdown.validate_type(FILE_PROMPT_TYPES, 'FilePromptConfig', config)
 
+    # Process the configuration
+    _process_config(config)
+
+
+def _process_config(config):
     # Output the prompt items
     for ix_item, item in enumerate(config['items']):
 
+        # Config item
+        if 'config' in item:
+            with open(item['config'], 'r', encoding='utf-8') as config_file:
+                config = json.load(config_file)
+            schema_markdown.validate_type(FILE_PROMPT_TYPES, 'FilePromptConfig', config)
+            _process_config(config)
+
         # File item
-        if 'file' in item:
+        elif 'file' in item:
             file_path = item['file']
             if ix_item != 0:
                 print()
@@ -136,6 +146,9 @@ struct FilePromptConfig
 
 # A prompt item
 union FilePromptItem
+
+    # Config file include
+    string config
 
     # A prompt message
     string message
