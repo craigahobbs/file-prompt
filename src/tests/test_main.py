@@ -1,18 +1,18 @@
 # Licensed under the MIT License
-# https://github.com/craigahobbs/promptkit/blob/main/LICENSE
+# https://github.com/craigahobbs/promptmaker/blob/main/LICENSE
 
 from io import StringIO
 import unittest
 from unittest.mock import patch
 
-import promptkit.__main__
-from promptkit.main import main
+import promptmaker.__main__
+from promptmaker.main import main
 
 
 class TestMain(unittest.TestCase):
 
     def test_main_submodule(self):
-        self.assertTrue(promptkit.__main__)
+        self.assertTrue(promptmaker.__main__)
 
 
     def test_main(self):

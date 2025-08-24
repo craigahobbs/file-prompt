@@ -1,9 +1,9 @@
-# promptkit
+# promptmaker
 
-[![PyPI - Status](https://img.shields.io/pypi/status/promptkit)](https://pypi.org/project/promptkit/)
-[![PyPI](https://img.shields.io/pypi/v/promptkit)](https://pypi.org/project/promptkit/)
-[![GitHub](https://img.shields.io/github/license/craigahobbs/promptkit)](https://github.com/craigahobbs/promptkit/blob/main/LICENSE)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/promptkit)](https://pypi.org/project/promptkit/)
+[![PyPI - Status](https://img.shields.io/pypi/status/promptmaker)](https://pypi.org/project/promptmaker/)
+[![PyPI](https://img.shields.io/pypi/v/promptmaker)](https://pypi.org/project/promptmaker/)
+[![GitHub](https://img.shields.io/github/license/craigahobbs/promptmaker)](https://github.com/craigahobbs/promptmaker/blob/main/LICENSE)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/promptmaker)](https://pypi.org/project/promptmaker/)
 
 Coming soon!
 
@@ -14,5 +14,5 @@ This package is developed using [python-build](https://github.com/craigahobbs/py
 It was started using [python-template](https://github.com/craigahobbs/python-template#readme) as follows:
 
 ~~~
-template-specialize python-template/template/ promptkit/ -k package promptkit -k name 'Craig A. Hobbs' -k email 'craigahobbs@gmail.com' -k github 'craigahobbs' -k noapi 1
+template-specialize python-template/template/ promptmaker/ -k package promptmaker -k name 'Craig A. Hobbs' -k email 'craigahobbs@gmail.com' -k github 'craigahobbs' -k noapi 1
 ~~~

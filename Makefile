@@ -1,5 +1,5 @@
 # Licensed under the MIT License
-# https://github.com/craigahobbs/promptkit/blob/main/LICENSE
+# https://github.com/craigahobbs/promptmaker/blob/main/LICENSE
 
 
 # Download python-build
