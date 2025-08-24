@@ -38,7 +38,7 @@ def main(argv=None):
                         help='the maximum directory depth (default is 0)')
     args = parser.parse_args(args=argv)
     if args.config_help:
-        parser.exit(status=2, message=FILE_PROMPT_SMD)
+        parser.exit(message=FILE_PROMPT_SMD)
 
     # Load the config file
     config = {'items': []}
@@ -53,26 +53,38 @@ def main(argv=None):
             config['items'].append({'url': item_str})
         else: # if item_type == 'm':
             config['items'].append({'message': item_str})
-    schema_markdown.validate_type(FILE_PROMPT_TYPES, 'FilePromptConfig', config)
+
+    # Validate the configuration
+    config = schema_markdown.validate_type(FILE_PROMPT_TYPES, 'FilePromptConfig', config)
 
     # Process the configuration
+    if not config['items']:
+        parser.error('no prompt items specified')
     _process_config(config)
 
 
-def _process_config(config):
+def _process_config(config, root_dir='.'):
     # Output the prompt items
     for ix_item, item in enumerate(config['items']):
-
         # Config item
         if 'config' in item:
-            with open(item['config'], 'r', encoding='utf-8') as config_file:
+            config_path = item['config']
+            if not os.path.isabs(config_path):
+                config_path = os.path.normpath(os.path.join(root_dir, config_path))
+            with open(config_path, 'r', encoding='utf-8') as config_file:
                 config = json.load(config_file)
-            schema_markdown.validate_type(FILE_PROMPT_TYPES, 'FilePromptConfig', config)
-            _process_config(config)
+
+            # Validate the configuration
+            config = schema_markdown.validate_type(FILE_PROMPT_TYPES, 'FilePromptConfig', config)
+
+            # Process the configuration
+            _process_config(config, os.path.dirname(config_path))
 
         # File item
         elif 'file' in item:
             file_path = item['file']
+            if not os.path.isabs(file_path):
+                file_path = os.path.normpath(os.path.join(root_dir, file_path))
             if ix_item != 0:
                 print()
             print(f'<{file_path}>')
@@ -85,6 +97,8 @@ def _process_config(config):
         # Directory item
         elif 'dir' in item:
             dir_path = item['dir']['path']
+            if not os.path.isabs(dir_path):
+                dir_path = os.path.normpath(os.path.join(root_dir, dir_path))
             dir_exts = [f'.{ext.lstrip(".")}' for ext in item['dir'].get('exts') or []]
             dir_depth = item['dir'].get('depth', 0)
             for file_path in _get_directory_files(dir_path, dir_exts, dir_depth):
@@ -136,6 +150,27 @@ class TypedItemAction(argparse.Action):
         getattr(namespace, self.dest).append((type_id, values))
 
 
+# Helper enumerator to recursively get a directory's files
+def _get_directory_files(dir_name, file_exts, max_depth=0, current_depth=0):
+    return sorted(_get_directory_files_helper(dir_name, file_exts, max_depth, current_depth))
+
+def _get_directory_files_helper(dir_name, file_exts, max_depth, current_depth):
+    # Recursion too deep?
+    if max_depth > 0 and current_depth > max_depth:
+        return
+
+    # Scan the directory for files
+    for entry in os.scandir(dir_name):
+        if entry.is_file():
+            if os.path.splitext(entry.name)[1] in file_exts:
+                file_path = os.path.normpath(os.path.join(dir_name, entry.name))
+                yield file_path
+        elif entry.is_dir(): # pragma: no branch
+            dir_path = os.path.join(dir_name, entry.name)
+            yield from _get_directory_files_helper(dir_path, file_exts, max_depth, current_depth + 1)
+
+
+# The file-prompt configuration file format
 FILE_PROMPT_SMD = '''\
 # The file-prompt configuration file format
 struct FilePromptConfig
@@ -156,7 +191,7 @@ union FilePromptItem
     # A long prompt message
     string[len > 0] long
 
-    # File include POSIX path
+    # File include path
     string file
 
     # Directory include
@@ -169,7 +204,7 @@ union FilePromptItem
 # A directory include item
 struct FilePromptDir
 
-    # The directory POSIX path
+    # The directory path
     string path
 
     # The file extensions to include (e.g. ".py")
@@ -179,23 +214,3 @@ struct FilePromptDir
     optional int(>= 0) depth
 '''
 FILE_PROMPT_TYPES = schema_markdown.parse_schema_markdown(FILE_PROMPT_SMD)
-
-
-# Helper enumerator to recursively get a directory's files
-def _get_directory_files(dir_name, file_exts, max_depth=0, current_depth=0):
-    return sorted(_get_directory_files_helper(dir_name, file_exts, max_depth, current_depth))
-
-def _get_directory_files_helper(dir_name, file_exts, max_depth, current_depth):
-    # Recursion too deep?
-    if max_depth > 0 and current_depth > max_depth:
-        return
-
-    # Scan the directory for files
-    for entry in os.scandir(dir_name):
-        if entry.is_file():
-            if os.path.splitext(entry.name)[1] in file_exts:
-                file_path = os.path.normpath(os.path.join(dir_name, entry.name))
-                yield file_path
-        elif entry.is_dir(): # pragma: no branch
-            dir_path = os.path.join(dir_name, entry.name)
-            yield from _get_directory_files_helper(dir_path, file_exts, max_depth, current_depth + 1)
