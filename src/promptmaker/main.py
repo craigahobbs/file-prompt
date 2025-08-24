@@ -8,6 +8,7 @@ promptmaker command-line script main module
 import argparse
 import json
 import os
+import re
 import urllib.request
 
 import schema_markdown
@@ -69,10 +70,17 @@ def _process_config(config, root_dir='.'):
         # Config item
         if 'config' in item:
             config_path = item['config']
-            if not os.path.isabs(config_path):
-                config_path = os.path.normpath(os.path.join(root_dir, config_path))
-            with open(config_path, 'r', encoding='utf-8') as config_file:
-                config = json.load(config_file)
+
+            # Load the config path or URL
+            if re.match(_R_URL, config_path):
+                with urllib.request.urlopen(config_path) as config_response:
+                    config_text = config_response.read().decode('utf-8')
+            else:
+                if not os.path.isabs(config_path):
+                    config_path = os.path.normpath(os.path.join(root_dir, config_path))
+                with open(config_path, 'r', encoding='utf-8') as config_file:
+                    config_text = config_file.read()
+            config = json.loads(config_text)
 
             # Validate the configuration
             config = schema_markdown.validate_type(PROMPTMAKER_TYPES, 'PromptMakerConfig', config)
@@ -137,6 +145,11 @@ def _process_config(config, root_dir='.'):
             print(item['message'])
 
 
+# Regular expression to match a URL
+_R_URL = re.compile(r'^[a-z]+:')
+
+
+# Prompt item argument type
 class TypedItemAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         # Initialize the destination list if it doesn't exist
