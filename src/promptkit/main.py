@@ -1,8 +1,8 @@
 # Licensed under the MIT License
-# https://github.com/craigahobbs/file-prompt/blob/main/LICENSE
+# https://github.com/craigahobbs/promptkit/blob/main/LICENSE
 
 """
-file-prompt command-line script main module
+promptkit command-line script main module
 """
 
 import argparse
@@ -15,15 +15,15 @@ import schema_markdown
 
 def main(argv=None):
     """
-    file-prompt command-line script main entry point
+    promptkit command-line script main entry point
     """
 
     # Command line arguments
-    parser = argparse.ArgumentParser(prog='file-prompt')
+    parser = argparse.ArgumentParser(prog='promptkit')
     parser.add_argument('-g', '--config-help', action='store_true',
-                        help='display the file-prompt config file format')
+                        help='display the promptkit config file format')
     parser.add_argument('-c', '--config', metavar='PATH', dest='items', action=TypedItemAction,
-                        help='include the file-prompt config')
+                        help='include the promptkit config')
     parser.add_argument('-m', '--message', metavar='TEXT', dest='items', action=TypedItemAction,
                         help='include the prompt message')
     parser.add_argument('-u', '--url', metavar='URL', dest='items', action=TypedItemAction,
@@ -38,7 +38,7 @@ def main(argv=None):
                         help='the maximum directory depth (default is 0)')
     args = parser.parse_args(args=argv)
     if args.config_help:
-        parser.exit(message=FILE_PROMPT_SMD)
+        parser.exit(message=PROMPTKIT_SMD)
 
     # Load the config file
     config = {'items': []}
@@ -55,11 +55,11 @@ def main(argv=None):
             config['items'].append({'message': item_str})
 
     # Validate the configuration
-    config = schema_markdown.validate_type(FILE_PROMPT_TYPES, 'FilePromptConfig', config)
-
-    # Process the configuration
     if not config['items']:
         parser.error('no prompt items specified')
+    config = schema_markdown.validate_type(PROMPTKIT_TYPES, 'PromptkitConfig', config)
+
+    # Process the configuration
     _process_config(config)
 
 
@@ -75,7 +75,7 @@ def _process_config(config, root_dir='.'):
                 config = json.load(config_file)
 
             # Validate the configuration
-            config = schema_markdown.validate_type(FILE_PROMPT_TYPES, 'FilePromptConfig', config)
+            config = schema_markdown.validate_type(PROMPTKIT_TYPES, 'PromptkitConfig', config)
 
             # Process the configuration
             _process_config(config, os.path.dirname(config_path))
@@ -170,17 +170,17 @@ def _get_directory_files_helper(dir_name, file_exts, max_depth, current_depth):
             yield from _get_directory_files_helper(dir_path, file_exts, max_depth, current_depth + 1)
 
 
-# The file-prompt configuration file format
-FILE_PROMPT_SMD = '''\
-# The file-prompt configuration file format
-struct FilePromptConfig
+# The promptkit configuration file format
+PROMPTKIT_SMD = '''\
+# The promptkit configuration file format
+struct PromptkitConfig
 
     # The list of prompt items
-    FilePromptItem[len > 0] items
+    PromptkitItem[len > 0] items
 
 
 # A prompt item
-union FilePromptItem
+union PromptkitItem
 
     # Config file include
     string config
@@ -195,14 +195,14 @@ union FilePromptItem
     string file
 
     # Directory include
-    FilePromptDir dir
+    PromptkitDir dir
 
     # URL include
     string url
 
 
 # A directory include item
-struct FilePromptDir
+struct PromptkitDir
 
     # The directory path
     string path
@@ -213,4 +213,4 @@ struct FilePromptDir
     # The directory traversal depth (default is 0, infinite)
     optional int(>= 0) depth
 '''
-FILE_PROMPT_TYPES = schema_markdown.parse_schema_markdown(FILE_PROMPT_SMD)
+PROMPTKIT_TYPES = schema_markdown.parse_schema_markdown(PROMPTKIT_SMD)

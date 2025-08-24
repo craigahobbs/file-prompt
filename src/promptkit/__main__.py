@@ -1,8 +1,8 @@
 # Licensed under the MIT License
-# https://github.com/craigahobbs/file-prompt/blob/main/LICENSE
+# https://github.com/craigahobbs/promptkit/blob/main/LICENSE
 
 """
-file-prompt top-level script environment
+promptkit top-level script environment
 """
 
 from .main import main
