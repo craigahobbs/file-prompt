@@ -128,12 +128,18 @@ def _process_config(config, root_dir='.'):
 
         # URL item
         elif 'url' in item:
+            # Get the URL resource text
             url = item['url']
+            try:
+                with urllib.request.urlopen(item['url']) as response:
+                    url_text = response.read().strip().decode('utf-8')
+            except:
+                url_text = f'Error: Failed to fetch URL, "{url}"'
+
+            # Output the URL resource text
             if ix_item != 0:
                 print()
             print(f'<{url}>')
-            with urllib.request.urlopen(item['url']) as response:
-                url_text = response.read().strip().decode('utf-8')
             if url_text:
                 print(url_text)
             print(f'</{url}>')

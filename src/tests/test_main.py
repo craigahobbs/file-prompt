@@ -251,6 +251,20 @@ URL content
         self.assertEqual(stderr.getvalue(), '')
 
 
+    def test_url_exception(self):
+        with patch('urllib.request.urlopen') as mock_urlopen, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            mock_urlopen.side_effect = Exception('Boom!')
+            main(['-u', 'http://invalid.local'])
+        self.assertEqual(stdout.getvalue(), '''\
+<http://invalid.local>
+Error: Failed to fetch URL, "http://invalid.local"
+</http://invalid.local>
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
     def test_dir(self):
         with create_test_files([
             ('test.txt', 'Hello!'),
