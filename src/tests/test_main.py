@@ -93,6 +93,21 @@ long!
         self.assertEqual(stderr.getvalue(), '')
 
 
+    def test_config_url(self):
+        with patch('urllib.request.urlopen') as mock_urlopen, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            mock_response = unittest.mock.MagicMock()
+            mock_response.read.return_value = b'{"items": [{"message": "Hello!"}]}'
+            mock_urlopen.return_value.__enter__.return_value = mock_response
+
+            main(['-c', 'https://invalid.local/test.json'])
+        self.assertEqual(stdout.getvalue(), '''\
+Hello!
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
     def test_config_nested(self):
         with create_test_files([
             ('main.json', '''\
@@ -208,11 +223,11 @@ Error: File not found, "not-found/unknown.txt"
             mock_response.read.return_value = b'URL content\n'
             mock_urlopen.return_value.__enter__.return_value = mock_response
 
-            main(['-u', 'http://test.local'])
+            main(['-u', 'https://test.local'])
         self.assertEqual(stdout.getvalue(), '''\
-<http://test.local>
+<https://test.local>
 URL content
-</http://test.local>
+</https://test.local>
 ''')
         self.assertEqual(stderr.getvalue(), '')
 
@@ -225,13 +240,13 @@ URL content
             mock_response.read.return_value = b'URL content\n'
             mock_urlopen.return_value.__enter__.return_value = mock_response
 
-            main(['-m', 'Hello!', '-u', 'http://test.local'])
+            main(['-m', 'Hello!', '-u', 'https://test.local'])
         self.assertEqual(stdout.getvalue(), '''\
 Hello!
 
-<http://test.local>
+<https://test.local>
 URL content
-</http://test.local>
+</https://test.local>
 ''')
         self.assertEqual(stderr.getvalue(), '')
 
@@ -243,10 +258,10 @@ URL content
             mock_response = unittest.mock.MagicMock()
             mock_response.read.return_value = b''
             mock_urlopen.return_value.__enter__.return_value = mock_response
-            main(['-u', 'http://test.local'])
+            main(['-u', 'https://test.local'])
         self.assertEqual(stdout.getvalue(), '''\
-<http://test.local>
-</http://test.local>
+<https://test.local>
+</https://test.local>
 ''')
         self.assertEqual(stderr.getvalue(), '')
 
@@ -256,11 +271,11 @@ URL content
              patch('sys.stdout', StringIO()) as stdout, \
              patch('sys.stderr', StringIO()) as stderr:
             mock_urlopen.side_effect = Exception('Boom!')
-            main(['-u', 'http://invalid.local'])
+            main(['-u', 'https://invalid.local'])
         self.assertEqual(stdout.getvalue(), '''\
-<http://invalid.local>
-Error: Failed to fetch URL, "http://invalid.local"
-</http://invalid.local>
+<https://invalid.local>
+Error: Failed to fetch URL, "https://invalid.local"
+</https://invalid.local>
 ''')
         self.assertEqual(stderr.getvalue(), '')
 
@@ -283,6 +298,23 @@ Hello!
 <{sub_path}>
 Goodbye!
 </{sub_path}>
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_dir_depth(self):
+        with create_test_files([
+            ('test.txt', 'Hello!'),
+            (('subdir', 'sub.txt'), 'Goodbye!')
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            file_path = os.path.join(temp_dir, 'test.txt')
+            main(['-d', temp_dir, '-x', 'txt', '-l', '1'])
+        self.assertEqual(stdout.getvalue(), f'''\
+<{file_path}>
+Hello!
+</{file_path}>
 ''')
         self.assertEqual(stderr.getvalue(), '')
 

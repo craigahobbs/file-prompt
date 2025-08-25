@@ -19,10 +19,6 @@ $(eval $(call WGET, https://craigahobbs.github.io/python-build/pylintrc))
 include Makefile.base
 
 
-# Temporarily reduce coverage
-COVERAGE_REPORT_ARGS := $(COVERAGE_REPORT_ARGS) --fail-under 99
-
-
 # Disable pylint docstring warnings
 PYLINT_ARGS := $(PYLINT_ARGS) --disable=missing-class-docstring --disable=missing-function-docstring --disable=missing-module-docstring
 

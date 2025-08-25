@@ -194,7 +194,7 @@ def _get_directory_files(dir_name, file_exts, max_depth=0, current_depth=0):
 
 def _get_directory_files_helper(dir_name, file_exts, max_depth, current_depth):
     # Recursion too deep?
-    if max_depth > 0 and current_depth > max_depth:
+    if max_depth > 0 and current_depth >= max_depth:
         return
 
     # Scan the directory for files
