@@ -93,11 +93,18 @@ def _process_config(config, root_dir='.'):
             file_path = item['file']
             if not os.path.isabs(file_path):
                 file_path = os.path.normpath(os.path.join(root_dir, file_path))
+
+            # Read the file
+            try:
+                with open(file_path, 'r', encoding='utf-8') as file_file:
+                    file_text = file_file.read().strip()
+            except:
+                file_text = f'Error: File not found, "{file_path}"'
+
+            # Output the file
             if ix_item != 0:
                 print()
             print(f'<{file_path}>')
-            with open(file_path, 'r', encoding='utf-8') as file_file:
-                file_text = file_file.read().strip()
             if file_text:
                 print(file_text)
             print(f'</{file_path}>')

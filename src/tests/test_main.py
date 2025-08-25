@@ -8,6 +8,8 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
+import schema_markdown
+
 import ctxkit.__main__
 from ctxkit.main import main
 
@@ -76,7 +78,7 @@ Goodbye
         {"long": ["Hello,", "long!"]}
     ]
 }
-'''), \
+''')
         ]) as temp_dir, \
              patch('sys.stdout', StringIO()) as stdout, \
              patch('sys.stderr', StringIO()) as stderr:
@@ -90,18 +92,66 @@ long!
         self.assertEqual(stderr.getvalue(), '')
 
 
+    def test_config_nested(self):
+        with create_test_files([
+            ('main.json', '''\
+{
+    "items": [
+        {"config": "nested.json"},
+        {"message": "Main message"}
+    ]
+}
+'''),
+            ('nested.json', '''\
+{
+    "items": [
+        {"message": "Nested message"}
+    ]
+}
+''')
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            main(['-c', os.path.join(temp_dir, 'main.json')])
+        self.assertEqual(stdout.getvalue(), '''\
+Nested message
+
+Main message
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_config_invalid(self):
+        with create_test_files([
+            ('invalid.json', '{"items": [{"invalid": "value"}]}')
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
+                main(['-c', os.path.join(temp_dir, 'invalid.json')])
+        self.assertEqual(str(cm_exc.exception), "Unknown member 'items.0.invalid'")
+        self.assertEqual(stdout.getvalue(), '')
+        self.assertEqual(stderr.getvalue(), '')
+
+
     def test_file(self):
         with create_test_files([
-            ('test.txt', 'Hello!')
+            ('test.txt', 'Hello!'),
+            ('test2.txt', 'Hello2!')
         ]) as temp_dir, \
              patch('sys.stdout', StringIO()) as stdout, \
              patch('sys.stderr', StringIO()) as stderr:
             file_path = os.path.join(temp_dir, 'test.txt')
-            main(['-f', file_path])
+            file_path2 = os.path.join(temp_dir, 'test2.txt')
+            main(['-f', file_path, '-f', file_path2])
         self.assertEqual(stdout.getvalue(), f'''\
 <{file_path}>
 Hello!
 </{file_path}>
+
+<{file_path2}>
+Hello2!
+</{file_path2}>
 ''')
         self.assertEqual(stderr.getvalue(), '')
 
@@ -137,6 +187,18 @@ Hello!
         self.assertEqual(stderr.getvalue(), '')
 
 
+    def test_file_relative_not_found(self):
+        with patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            main(['-f', 'not-found/unknown.txt'])
+        self.assertEqual(stdout.getvalue(), '''\
+<not-found/unknown.txt>
+Error: File not found, "not-found/unknown.txt"
+</not-found/unknown.txt>
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
     def test_url(self):
         with patch('urllib.request.urlopen') as mock_urlopen, \
              patch('sys.stdout', StringIO()) as stdout, \
@@ -149,6 +211,21 @@ Hello!
         self.assertEqual(stdout.getvalue(), '''\
 <http://test.local>
 URL content
+</http://test.local>
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_url_empty(self):
+        with patch('urllib.request.urlopen') as mock_urlopen, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            mock_response = unittest.mock.MagicMock()
+            mock_response.read.return_value = b''
+            mock_urlopen.return_value.__enter__.return_value = mock_response
+            main(['-u', 'http://test.local'])
+        self.assertEqual(stdout.getvalue(), '''\
+<http://test.local>
 </http://test.local>
 ''')
         self.assertEqual(stderr.getvalue(), '')
@@ -173,4 +250,15 @@ Hello!
 Goodbye!
 </{sub_path}>
 ''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_dir_no_files(self):
+        with create_test_files([
+            (('subdir', 'file1.md'), 'Content1')
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            main(['-d', temp_dir, '-x', 'txt'])
+        self.assertEqual(stdout.getvalue(), '')
         self.assertEqual(stderr.getvalue(), '')
