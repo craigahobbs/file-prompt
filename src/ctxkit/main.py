@@ -36,7 +36,7 @@ def main(argv=None):
     parser.add_argument('-x', '--ext', metavar='EXT', action='append', default=[],
                         help='include files with the extension')
     parser.add_argument('-l', '--depth', metavar='N', type=int, default=0,
-                        help='the maximum directory depth (default is 0)')
+                        help='the maximum directory depth, default is 0 (infinite)')
     args = parser.parse_args(args=argv)
     if args.config_help:
         parser.exit(message=CTXKIT_SMD)
