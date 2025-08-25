@@ -309,5 +309,19 @@ Goodbye!
              patch('sys.stdout', StringIO()) as stdout, \
              patch('sys.stderr', StringIO()) as stderr:
             main(['-d', temp_dir, '-x', 'txt'])
-        self.assertEqual(stdout.getvalue(), '')
+        self.assertEqual(stdout.getvalue(), f'''\
+Error: No files found, "{temp_dir}"
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_dir_relative_not_found(self):
+        with patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            main(['-d', 'not-found/unknown/', '-d', 'not-found/unknown2', '-x', 'txt'])
+        self.assertEqual(stdout.getvalue(), '''\
+Error: No files found, "not-found/unknown"
+
+Error: No files found, "not-found/unknown2"
+''')
         self.assertEqual(stderr.getvalue(), '')

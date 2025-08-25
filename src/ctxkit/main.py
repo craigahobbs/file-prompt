@@ -111,20 +111,32 @@ def _process_config(config, root_dir='.'):
 
         # Directory item
         elif 'dir' in item:
+            # Recursively find the files of the requested extensions
             dir_path = item['dir']['path']
             if not os.path.isabs(dir_path):
                 dir_path = os.path.normpath(os.path.join(root_dir, dir_path))
             dir_exts = [f'.{ext.lstrip(".")}' for ext in item['dir'].get('exts') or []]
             dir_depth = item['dir'].get('depth', 0)
-            for ix_file, file_path in enumerate(_get_directory_files(dir_path, dir_exts, dir_depth)):
-                if ix_item != 0 or ix_file != 0:
+            try:
+                dir_files = list(_get_directory_files(dir_path, dir_exts, dir_depth))
+            except:
+                dir_files = []
+
+            # Output the file text
+            if not dir_files:
+                if ix_item != 0:
                     print()
-                print(f'<{file_path}>')
-                with open(file_path, 'r', encoding='utf-8') as file_file:
-                    file_text = file_file.read().strip()
-                if file_text:
-                    print(file_text)
-                print(f'</{file_path}>')
+                print(f'Error: No files found, "{dir_path}"')
+            else:
+                for ix_file, file_path in enumerate(dir_files):
+                    if ix_item != 0 or ix_file != 0:
+                        print()
+                    print(f'<{file_path}>')
+                    with open(file_path, 'r', encoding='utf-8') as file_file:
+                        file_text = file_file.read().strip()
+                    if file_text:
+                        print(file_text)
+                    print(f'</{file_path}>')
 
         # URL item
         elif 'url' in item:
