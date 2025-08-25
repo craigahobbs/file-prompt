@@ -109,8 +109,8 @@ def _process_config(config, root_dir='.'):
                 dir_path = os.path.normpath(os.path.join(root_dir, dir_path))
             dir_exts = [f'.{ext.lstrip(".")}' for ext in item['dir'].get('exts') or []]
             dir_depth = item['dir'].get('depth', 0)
-            for file_path in _get_directory_files(dir_path, dir_exts, dir_depth):
-                if ix_item != 0:
+            for ix_file, file_path in enumerate(_get_directory_files(dir_path, dir_exts, dir_depth)):
+                if ix_item != 0 or ix_file != 0:
                     print()
                 print(f'<{file_path}>')
                 with open(file_path, 'r', encoding='utf-8') as file_file:
