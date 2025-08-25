@@ -72,21 +72,30 @@ def _process_config(config, root_dir='.'):
             config_path = item['config']
 
             # Load the config path or URL
-            if re.match(_R_URL, config_path):
-                with urllib.request.urlopen(config_path) as config_response:
-                    config_text = config_response.read().decode('utf-8')
+            try:
+                if re.match(_R_URL, config_path):
+                    with urllib.request.urlopen(config_path) as config_response:
+                        config_text = config_response.read().decode('utf-8')
+                else:
+                    if not os.path.isabs(config_path):
+                        config_path = os.path.normpath(os.path.join(root_dir, config_path))
+                    with open(config_path, 'r', encoding='utf-8') as config_file:
+                        config_text = config_file.read()
+                config = json.loads(config_text)
+            except:
+                config = None
+
+            # Process the config file
+            if config is None:
+                if ix_item != 0:
+                    print()
+                print(f'Error: Failed to load configuration file, "{config_path}"')
             else:
-                if not os.path.isabs(config_path):
-                    config_path = os.path.normpath(os.path.join(root_dir, config_path))
-                with open(config_path, 'r', encoding='utf-8') as config_file:
-                    config_text = config_file.read()
-            config = json.loads(config_text)
+                # Validate the configuration
+                config = schema_markdown.validate_type(CTXKIT_TYPES, 'CtxKitConfig', config)
 
-            # Validate the configuration
-            config = schema_markdown.validate_type(CTXKIT_TYPES, 'CtxKitConfig', config)
-
-            # Process the configuration
-            _process_config(config, os.path.dirname(config_path))
+                # Process the configuration
+                _process_config(config, os.path.dirname(config_path))
 
         # File item
         elif 'file' in item:

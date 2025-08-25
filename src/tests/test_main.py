@@ -93,6 +93,20 @@ long!
         self.assertEqual(stderr.getvalue(), '')
 
 
+    def test_config_failure(self):
+        with patch('urllib.request.urlopen') as mock_urlopen, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            mock_urlopen.side_effect = Exception('Boom!')
+            main(['-c', 'not-found/unknown.json', '-c', 'https://test.local/unknown.json'])
+        self.assertEqual(stdout.getvalue(), '''\
+Error: Failed to load configuration file, "not-found/unknown.json"
+
+Error: Failed to load configuration file, "https://test.local/unknown.json"
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
     def test_config_url(self):
         with patch('urllib.request.urlopen') as mock_urlopen, \
              patch('sys.stdout', StringIO()) as stdout, \
