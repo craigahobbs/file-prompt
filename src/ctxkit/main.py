@@ -165,9 +165,7 @@ class TypedItemAction(argparse.Action):
 
 # Helper enumerator to recursively get a directory's files
 def _get_directory_files(dir_name, file_exts, max_depth=0, current_depth=0):
-    yield from (file_path for _, file_path in sorted(
-        (os.path.split(file_path), file_path) for file_path in _get_directory_files_helper(dir_name, file_exts, max_depth, current_depth)
-    ))
+    yield from (file_path for _, file_path in sorted(_get_directory_files_helper(dir_name, file_exts, max_depth, current_depth)))
 
 def _get_directory_files_helper(dir_name, file_exts, max_depth, current_depth):
     # Recursion too deep?
@@ -179,7 +177,7 @@ def _get_directory_files_helper(dir_name, file_exts, max_depth, current_depth):
         if entry.is_file():
             if os.path.splitext(entry.name)[1] in file_exts:
                 file_path = os.path.normpath(os.path.join(dir_name, entry.name))
-                yield file_path
+                yield (os.path.split(file_path), file_path)
         elif entry.is_dir(): # pragma: no branch
             dir_path = os.path.join(dir_name, entry.name)
             yield from _get_directory_files_helper(dir_path, file_exts, max_depth, current_depth + 1)
