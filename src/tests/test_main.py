@@ -35,6 +35,16 @@ class TestMain(unittest.TestCase):
         self.assertTrue(ctxkit.__main__)
 
 
+    def test_help_config(self):
+        with patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-g'])
+        self.assertEqual(cm_exc.exception.code, 0)
+        self.assertEqual(stdout.getvalue(), '')
+        self.assertTrue(stderr.getvalue().startswith('# The ctxkit configuration file format'))
+
+
     def test_no_items(self):
         with patch('sys.stdout', StringIO()) as stdout, \
              patch('sys.stderr', StringIO()) as stderr:
@@ -76,5 +86,90 @@ Hello, message!
 
 Hello,
 long!
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_file(self):
+        with create_test_files([
+            ('test.txt', 'Hello!')
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            file_path = os.path.join(temp_dir, 'test.txt')
+            main(['-f', file_path])
+        self.assertEqual(stdout.getvalue(), f'''\
+<{file_path}>
+Hello!
+</{file_path}>
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_file_empty(self):
+        with create_test_files([
+            ('test.txt', '')
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            file_path = os.path.join(temp_dir, 'test.txt')
+            main(['-f', file_path])
+        self.assertEqual(stdout.getvalue(), f'''\
+<{file_path}>
+</{file_path}>
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_file_strip(self):
+        with create_test_files([
+            ('test.txt', '\nHello!\n')
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            file_path = os.path.join(temp_dir, 'test.txt')
+            main(['-f', file_path])
+        self.assertEqual(stdout.getvalue(), f'''\
+<{file_path}>
+Hello!
+</{file_path}>
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_url(self):
+        with patch('urllib.request.urlopen') as mock_urlopen, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            mock_response = unittest.mock.MagicMock()
+            mock_response.read.return_value = b'URL content\n'
+            mock_urlopen.return_value.__enter__.return_value = mock_response
+
+            main(['-u', 'http://test.local'])
+        self.assertEqual(stdout.getvalue(), '''\
+<http://test.local>
+URL content
+</http://test.local>
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_dir(self):
+        with create_test_files([
+            ('test.txt', 'Hello!'),
+            (('subdir', 'sub.txt'), 'Goodbye!')
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            file_path = os.path.join(temp_dir, 'test.txt')
+            sub_path = os.path.join(temp_dir, 'subdir', 'sub.txt')
+            main(['-d', temp_dir, '-x', 'txt'])
+        self.assertEqual(stdout.getvalue(), f'''\
+<{file_path}>
+Hello!
+</{file_path}>
+<{sub_path}>
+Goodbye!
+</{sub_path}>
 ''')
         self.assertEqual(stderr.getvalue(), '')
