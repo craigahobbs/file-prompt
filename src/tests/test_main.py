@@ -74,7 +74,7 @@ Goodbye
             ('test.json', '''\
 {
     "items": [
-        {"message": "Hello, message!"},
+        {"long": ["Hello,", "message!"]},
         {"long": ["Hello,", "long!"]}
     ]
 }
@@ -84,7 +84,8 @@ Goodbye
              patch('sys.stderr', StringIO()) as stderr:
             main(['-c', os.path.join(temp_dir, 'test.json')])
         self.assertEqual(stdout.getvalue(), '''\
-Hello, message!
+Hello,
+message!
 
 Hello,
 long!
@@ -216,6 +217,25 @@ URL content
         self.assertEqual(stderr.getvalue(), '')
 
 
+    def test_url_second(self):
+        with patch('urllib.request.urlopen') as mock_urlopen, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            mock_response = unittest.mock.MagicMock()
+            mock_response.read.return_value = b'URL content\n'
+            mock_urlopen.return_value.__enter__.return_value = mock_response
+
+            main(['-m', 'Hello!', '-u', 'http://test.local'])
+        self.assertEqual(stdout.getvalue(), '''\
+Hello!
+
+<http://test.local>
+URL content
+</http://test.local>
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
     def test_url_empty(self):
         with patch('urllib.request.urlopen') as mock_urlopen, \
              patch('sys.stdout', StringIO()) as stdout, \
@@ -249,6 +269,21 @@ Hello!
 <{sub_path}>
 Goodbye!
 </{sub_path}>
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_dir_empty(self):
+        with create_test_files([
+            ('test.txt', '')
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            file_path = os.path.join(temp_dir, 'test.txt')
+            main(['-d', temp_dir, '-x', 'txt'])
+        self.assertEqual(stdout.getvalue(), f'''\
+<{file_path}>
+</{file_path}>
 ''')
         self.assertEqual(stderr.getvalue(), '')
 
