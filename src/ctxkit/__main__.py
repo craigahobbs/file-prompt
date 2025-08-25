@@ -1,8 +1,8 @@
 # Licensed under the MIT License
-# https://github.com/craigahobbs/promptmaker/blob/main/LICENSE
+# https://github.com/craigahobbs/ctxkit/blob/main/LICENSE
 
 """
-promptmaker top-level script environment
+ctxkit top-level script environment
 """
 
 from .main import main

@@ -1,18 +1,18 @@
 # Licensed under the MIT License
-# https://github.com/craigahobbs/promptmaker/blob/main/LICENSE
+# https://github.com/craigahobbs/ctxkit/blob/main/LICENSE
 
 from io import StringIO
 import unittest
 from unittest.mock import patch
 
-import promptmaker.__main__
-from promptmaker.main import main
+import ctxkit.__main__
+from ctxkit.main import main
 
 
 class TestMain(unittest.TestCase):
 
     def test_main_submodule(self):
-        self.assertTrue(promptmaker.__main__)
+        self.assertTrue(ctxkit.__main__)
 
 
     def test_main(self):

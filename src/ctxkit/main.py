@@ -1,8 +1,8 @@
 # Licensed under the MIT License
-# https://github.com/craigahobbs/promptmaker/blob/main/LICENSE
+# https://github.com/craigahobbs/ctxkit/blob/main/LICENSE
 
 """
-promptmaker command-line script main module
+ctxkit command-line script main module
 """
 
 import argparse
@@ -16,15 +16,15 @@ import schema_markdown
 
 def main(argv=None):
     """
-    promptmaker command-line script main entry point
+    ctxkit command-line script main entry point
     """
 
     # Command line arguments
-    parser = argparse.ArgumentParser(prog='promptmaker')
+    parser = argparse.ArgumentParser(prog='ctxkit')
     parser.add_argument('-g', '--config-help', action='store_true',
-                        help='display the promptmaker config file format')
+                        help='display the ctxkit config file format')
     parser.add_argument('-c', '--config', metavar='PATH', dest='items', action=TypedItemAction,
-                        help='include the promptmaker config')
+                        help='include the ctxkit config')
     parser.add_argument('-m', '--message', metavar='TEXT', dest='items', action=TypedItemAction,
                         help='include the prompt message')
     parser.add_argument('-u', '--url', metavar='URL', dest='items', action=TypedItemAction,
@@ -39,7 +39,7 @@ def main(argv=None):
                         help='the maximum directory depth (default is 0)')
     args = parser.parse_args(args=argv)
     if args.config_help:
-        parser.exit(message=PROMPTMAKER_SMD)
+        parser.exit(message=CTXKIT_SMD)
 
     # Load the config file
     config = {'items': []}
@@ -58,7 +58,7 @@ def main(argv=None):
     # Validate the configuration
     if not config['items']:
         parser.error('no prompt items specified')
-    config = schema_markdown.validate_type(PROMPTMAKER_TYPES, 'PromptMakerConfig', config)
+    config = schema_markdown.validate_type(CTXKIT_TYPES, 'CtxKitConfig', config)
 
     # Process the configuration
     _process_config(config)
@@ -83,7 +83,7 @@ def _process_config(config, root_dir='.'):
             config = json.loads(config_text)
 
             # Validate the configuration
-            config = schema_markdown.validate_type(PROMPTMAKER_TYPES, 'PromptMakerConfig', config)
+            config = schema_markdown.validate_type(CTXKIT_TYPES, 'CtxKitConfig', config)
 
             # Process the configuration
             _process_config(config, os.path.dirname(config_path))
@@ -183,17 +183,17 @@ def _get_directory_files_helper(dir_name, file_exts, max_depth, current_depth):
             yield from _get_directory_files_helper(dir_path, file_exts, max_depth, current_depth + 1)
 
 
-# The promptmaker configuration file format
-PROMPTMAKER_SMD = '''\
-# The promptmaker configuration file format
-struct PromptMakerConfig
+# The ctxkit configuration file format
+CTXKIT_SMD = '''\
+# The ctxkit configuration file format
+struct CtxKitConfig
 
     # The list of prompt items
-    PromptMakerItem[len > 0] items
+    CtxKitItem[len > 0] items
 
 
 # A prompt item
-union PromptMakerItem
+union CtxKitItem
 
     # Config file include
     string config
@@ -208,14 +208,14 @@ union PromptMakerItem
     string file
 
     # Directory include
-    PromptMakerDir dir
+    CtxKitDir dir
 
     # URL include
     string url
 
 
 # A directory include item
-struct PromptMakerDir
+struct CtxKitDir
 
     # The directory path
     string path
@@ -226,4 +226,4 @@ struct PromptMakerDir
     # The directory traversal depth (default is 0, infinite)
     optional int(>= 0) depth
 '''
-PROMPTMAKER_TYPES = schema_markdown.parse_schema_markdown(PROMPTMAKER_SMD)
+CTXKIT_TYPES = schema_markdown.parse_schema_markdown(CTXKIT_SMD)
