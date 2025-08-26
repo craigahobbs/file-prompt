@@ -3,6 +3,7 @@
 
 from contextlib import contextmanager
 from io import StringIO
+import json
 import os
 from tempfile import TemporaryDirectory
 import unittest
@@ -71,14 +72,12 @@ Goodbye
 
     def test_config(self):
         with create_test_files([
-            ('test.json', '''\
-{
-    "items": [
-        {"long": ["Hello,", "message!"]},
-        {"long": ["Hello,", "long!"]}
-    ]
-}
-''')
+            ('test.json', json.dumps({
+                'items': [
+                    {'long': ['Hello,', 'message!']},
+                    {'long': ['Hello,', 'long!']}
+                ]
+            }))
         ]) as temp_dir, \
              patch('sys.stdout', StringIO()) as stdout, \
              patch('sys.stderr', StringIO()) as stderr:
@@ -98,9 +97,10 @@ long!
              patch('sys.stdout', StringIO()) as stdout, \
              patch('sys.stderr', StringIO()) as stderr:
             mock_urlopen.side_effect = Exception('Boom!')
-            main(['-c', 'not-found/unknown.json', '-c', 'https://test.local/unknown.json'])
-        self.assertEqual(stdout.getvalue(), '''\
-Error: Failed to load configuration file, "not-found/unknown.json"
+            unknown_path = os.path.join('not-found', 'unknown.json')
+            main(['-c', unknown_path, '-c', 'https://test.local/unknown.json'])
+        self.assertEqual(stdout.getvalue(), f'''\
+Error: Failed to load configuration file, "{unknown_path}"
 
 Error: Failed to load configuration file, "https://test.local/unknown.json"
 ''')
@@ -124,21 +124,17 @@ Hello!
 
     def test_config_nested(self):
         with create_test_files([
-            ('main.json', f'''\
-{{
-    "items": [
-        {{"config": "{os.path.join('subdir', 'nested.json')}"}},
-        {{"message": "Main message"}}
-    ]
-}}
-'''),
-            (('subdir', 'nested.json'), '''\
-{
-    "items": [
-        {"file": "nested.txt"}
-    ]
-}
-'''),
+            ('main.json', json.dumps({
+                'items': [
+                    {'config': os.path.join('subdir', 'nested.json')},
+                    {'message': 'Main message'}
+                ]
+            })),
+            (('subdir', 'nested.json'), json.dumps({
+                'items': [
+                    {'file': 'nested.txt'}
+                ]
+            })),
             (('subdir', 'nested.txt'), 'Nested message')
         ]) as temp_dir, \
              patch('sys.stdout', StringIO()) as stdout, \
@@ -224,11 +220,12 @@ Hello!
     def test_file_relative_not_found(self):
         with patch('sys.stdout', StringIO()) as stdout, \
              patch('sys.stderr', StringIO()) as stderr:
-            main(['-f', 'not-found/unknown.txt'])
-        self.assertEqual(stdout.getvalue(), '''\
-<not-found/unknown.txt>
-Error: File not found, "not-found/unknown.txt"
-</not-found/unknown.txt>
+            unknown_path = os.path.join('not-found', 'unknown.txt')
+            main(['-f', unknown_path])
+        self.assertEqual(stdout.getvalue(), f'''\
+<{unknown_path}>
+Error: File not found, "{unknown_path}"
+</{unknown_path}>
 ''')
         self.assertEqual(stderr.getvalue(), '')
 
@@ -368,10 +365,12 @@ Error: No files found, "{temp_dir}"
     def test_dir_relative_not_found(self):
         with patch('sys.stdout', StringIO()) as stdout, \
              patch('sys.stderr', StringIO()) as stderr:
-            main(['-d', 'not-found/unknown/', '-d', 'not-found/unknown2', '-x', 'txt'])
-        self.assertEqual(stdout.getvalue(), '''\
-Error: No files found, "not-found/unknown"
+            unknown_path = os.path.join('not-found', 'unknown')
+            unknown_path2 = os.path.join('not-found', 'unknown2')
+            main(['-d', unknown_path, '-d', unknown_path2, '-x', 'txt'])
+        self.assertEqual(stdout.getvalue(), f'''\
+Error: No files found, "{unknown_path}"
 
-Error: No files found, "not-found/unknown2"
+Error: No files found, "{unknown_path2}"
 ''')
         self.assertEqual(stderr.getvalue(), '')
