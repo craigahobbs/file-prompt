@@ -46,20 +46,19 @@ def main(argv=None):
 
     # Load the config file
     config = {'items': []}
-    for item_type, item_str in (args.items or []):
+    for item_type, item_value in (args.items or []):
         if item_type == 'c':
-            config['items'].append({'config': item_str})
+            config['items'].append({'config': item_value})
         elif item_type == 'f':
-            config['items'].append({'file': item_str})
+            config['items'].append({'file': item_value})
         elif item_type == 'd':
-            config['items'].append({'dir': {'path': item_str, 'exts': args.ext, 'depth': args.depth}})
+            config['items'].append({'dir': {'path': item_value, 'exts': args.ext, 'depth': args.depth}})
         elif item_type == 'u':
-            config['items'].append({'url': item_str})
+            config['items'].append({'url': item_value})
         elif item_type == 'v':
-            var_name, var_value = item_str
-            config['items'].append({'var': {'name': var_name, 'value': var_value}})
+            config['items'].append({'var': {'name': item_value[0], 'value': item_value[1]}})
         else: # if item_type == 'm':
-            config['items'].append({'message': item_str})
+            config['items'].append({'message': item_value})
 
     # Validate the configuration
     if not config['items']:
