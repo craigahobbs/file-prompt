@@ -17,8 +17,8 @@ the text of the given file, in this case `main.py`.
 
 ## Usage
 
-Using the `ctxkit` command line application, you add any number or ordered *context items* of the
-following types: configuration files (`-c`), messages (`-m`), URLs (`-u`), files (`-f`), and
+Using the `ctxkit` command line application, you can add any number of ordered *context items* of
+the following types: configuration files (`-c`), messages (`-m`), URLs (`-u`), files (`-f`), and
 directories (`-d`).
 
 ```
@@ -41,8 +41,8 @@ options:
 
 ### Message Variables
 
-You can specify one or more variable in a message's text using the syntax, `{{var}}`. A variable's
-value is specified using the `-v` argument. For example:
+You can specify one or more variable references in a message's text using the syntax, `{{var}}`. A
+variable's value is specified using the `-v` argument. For example:
 
 ```
 ctxkit -v package ctxkit -m 'Write a 100 word or less description of the Python "{{package}}"'
@@ -51,8 +51,7 @@ ctxkit -v package ctxkit -m 'Write a 100 word or less description of the Python 
 
 ## Configuration Files
 
-The ctxkit JSON configuration file allows you to contruct complex prompts in a file, potentially
-using message variables for adding specialization.
+ctxkit JSON configuration files allow you to contruct complex prompts in one or more JSON files.
 
 The ctxkit `-g` argument outputs the JSON configuration file format defined using the
 [Schema Markdown Language](https://craigahobbs.github.io/schema-markdown-js/language/).
