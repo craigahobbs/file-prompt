@@ -285,7 +285,7 @@ struct CtxKitDir
     string path
 
     # The file extensions to include (e.g. ".py")
-    string[len >= 0] exts
+    string[] exts
 
     # The directory traversal depth (default is 0, infinite)
     optional int(>= 0) depth
