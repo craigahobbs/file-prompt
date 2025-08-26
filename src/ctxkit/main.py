@@ -6,6 +6,7 @@ ctxkit command-line script main module
 """
 
 import argparse
+from functools import partial
 import json
 import os
 import re
@@ -37,6 +38,8 @@ def main(argv=None):
                         help='include files with the extension')
     parser.add_argument('-l', '--depth', metavar='N', type=int, default=0,
                         help='the maximum directory depth, default is 0 (infinite)')
+    parser.add_argument('-v', '--var', nargs=2, metavar=('VAR', 'EXPR'), dest='items', action=TypedItemAction,
+                        help='define a message variable (reference with "{{var}}")')
     args = parser.parse_args(args=argv)
     if args.config_help:
         parser.exit(message=CTXKIT_SMD)
@@ -52,6 +55,9 @@ def main(argv=None):
             config['items'].append({'dir': {'path': item_str, 'exts': args.ext, 'depth': args.depth}})
         elif item_type == 'u':
             config['items'].append({'url': item_str})
+        elif item_type == 'v':
+            var_name, var_value = item_str
+            config['items'].append({'var': {'name': var_name, 'value': var_value}})
         else: # if item_type == 'm':
             config['items'].append({'message': item_str})
 
@@ -61,14 +67,17 @@ def main(argv=None):
     config = schema_markdown.validate_type(CTXKIT_TYPES, 'CtxKitConfig', config)
 
     # Process the configuration
-    _process_config(config)
+    _process_config(config, {})
 
 
-def _process_config(config, root_dir='.'):
+def _process_config(config, variables, root_dir='.'):
     # Output the prompt items
-    for ix_item, item in enumerate(config['items']):
+    is_first = True
+    for item in config['items']:
+        item_key = list(item.keys())[0]
+
         # Config item
-        if 'config' in item:
+        if item_key == 'config':
             config_path = item['config']
 
             # Load the config path or URL
@@ -87,7 +96,7 @@ def _process_config(config, root_dir='.'):
 
             # Process the config file
             if config is None:
-                if ix_item != 0:
+                if not is_first:
                     print()
                 print(f'Error: Failed to load configuration file, "{config_path}"')
             else:
@@ -95,10 +104,10 @@ def _process_config(config, root_dir='.'):
                 config = schema_markdown.validate_type(CTXKIT_TYPES, 'CtxKitConfig', config)
 
                 # Process the configuration
-                _process_config(config, os.path.dirname(config_path))
+                _process_config(config, variables, os.path.dirname(config_path))
 
         # File item
-        elif 'file' in item:
+        elif item_key == 'file':
             file_path = item['file']
             if not os.path.isabs(file_path):
                 file_path = os.path.normpath(os.path.join(root_dir, file_path))
@@ -111,7 +120,7 @@ def _process_config(config, root_dir='.'):
                 file_text = f'Error: File not found, "{file_path}"'
 
             # Output the file
-            if ix_item != 0:
+            if not is_first:
                 print()
             print(f'<{file_path}>')
             if file_text:
@@ -119,7 +128,7 @@ def _process_config(config, root_dir='.'):
             print(f'</{file_path}>')
 
         # Directory item
-        elif 'dir' in item:
+        elif item_key == 'dir':
             # Recursively find the files of the requested extensions
             dir_path = item['dir']['path']
             if not os.path.isabs(dir_path):
@@ -133,12 +142,12 @@ def _process_config(config, root_dir='.'):
 
             # Output the file text
             if not dir_files:
-                if ix_item != 0:
+                if not is_first:
                     print()
                 print(f'Error: No files found, "{dir_path}"')
             else:
                 for ix_file, file_path in enumerate(dir_files):
-                    if ix_item != 0 or ix_file != 0:
+                    if not is_first or ix_file != 0:
                         print()
                     print(f'<{file_path}>')
                     with open(file_path, 'r', encoding='utf-8') as file_file:
@@ -148,7 +157,7 @@ def _process_config(config, root_dir='.'):
                     print(f'</{file_path}>')
 
         # URL item
-        elif 'url' in item:
+        elif item_key == 'url':
             # Get the URL resource text
             url = item['url']
             try:
@@ -158,25 +167,33 @@ def _process_config(config, root_dir='.'):
                 url_text = f'Error: Failed to fetch URL, "{url}"'
 
             # Output the URL resource text
-            if ix_item != 0:
+            if not is_first:
                 print()
             print(f'<{url}>')
             if url_text:
                 print(url_text)
             print(f'</{url}>')
 
+        # Variable definition item
+        elif item_key == 'var':
+            variables[item['var']['name']] = item['var']['value']
+
         # Long message item
-        elif 'long' in item:
-            if ix_item != 0:
+        elif item_key == 'long':
+            if not is_first:
                 print()
             for message in item['long']:
-                print(message)
+                print(_replace_variables(message, variables))
 
         # Message item
-        else: # if 'message' in item:
-            if ix_item != 0:
+        else: # if item_key == 'message'
+            if not is_first:
                 print()
-            print(item['message'])
+            print(_replace_variables(item['message'], variables))
+
+        # Set not first
+        if is_first and item_key != 'var':
+            is_first = False
 
 
 # Regular expression to match a URL
@@ -195,6 +212,17 @@ class TypedItemAction(argparse.Action):
 
         # Append tuple (type_id, value)
         getattr(namespace, self.dest).append((type_id, values))
+
+
+# Helper to replace message variables
+def _replace_variables(text, variables):
+    return _R_VARIABLE.sub(partial(_replace_variables_match, variables), text)
+
+def _replace_variables_match(variables, match):
+    var_name = match.group(1)
+    return str(variables.get(var_name, ''))
+
+_R_VARIABLE = re.compile(r'\{\{\s*([_a-zA-Z]\w*)\s*\}\}')
 
 
 # Helper enumerator to recursively get a directory's files
@@ -247,6 +275,9 @@ union CtxKitItem
     # URL include
     string url
 
+    # Set a message variable (reference with "{{var}}")
+    CtxKitVariable var
+
 
 # A directory include item
 struct CtxKitDir
@@ -259,5 +290,15 @@ struct CtxKitDir
 
     # The directory traversal depth (default is 0, infinite)
     optional int(>= 0) depth
+
+
+# A variable definition item
+struct CtxKitVariable
+
+    # The variable's name
+    string name
+
+    # The variable's value
+    string value
 '''
 CTXKIT_TYPES = schema_markdown.parse_schema_markdown(CTXKIT_SMD)

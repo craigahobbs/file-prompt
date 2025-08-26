@@ -374,3 +374,23 @@ Error: No files found, "{unknown_path}"
 Error: No files found, "{unknown_path2}"
 ''')
         self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_variable(self):
+        with patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            main(['-v', 'first', 'Foo', '-v', 'Last', 'Bar', '-m', 'Hello, {{first}} {{ Last }}!'])
+        self.assertEqual(stdout.getvalue(), '''\
+Hello, Foo Bar!
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_variable_unknown(self):
+        with patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            main(['-v', 'Last', 'Bar', '-m', 'Hello, {{first}} {{ Last }}!'])
+        self.assertEqual(stdout.getvalue(), '''\
+Hello,  Bar!
+''')
+        self.assertEqual(stderr.getvalue(), '')
