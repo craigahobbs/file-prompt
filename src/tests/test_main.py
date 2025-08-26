@@ -124,27 +124,31 @@ Hello!
 
     def test_config_nested(self):
         with create_test_files([
-            ('main.json', '''\
+            ('main.json', f'''\
+{{
+    "items": [
+        {{"config": "{os.path.join('subdir', 'nested.json')}"}},
+        {{"message": "Main message"}}
+    ]
+}}
+'''),
+            (('subdir', 'nested.json'), '''\
 {
     "items": [
-        {"config": "nested.json"},
-        {"message": "Main message"}
+        {"file": "nested.txt"}
     ]
 }
 '''),
-            ('nested.json', '''\
-{
-    "items": [
-        {"message": "Nested message"}
-    ]
-}
-''')
+            (('subdir', 'nested.txt'), 'Nested message')
         ]) as temp_dir, \
              patch('sys.stdout', StringIO()) as stdout, \
              patch('sys.stderr', StringIO()) as stderr:
+            nested_path = os.path.join(temp_dir, 'subdir', 'nested.txt')
             main(['-c', os.path.join(temp_dir, 'main.json')])
-        self.assertEqual(stdout.getvalue(), '''\
+        self.assertEqual(stdout.getvalue(), f'''\
+<{nested_path}>
 Nested message
+</{nested_path}>
 
 Main message
 ''')
