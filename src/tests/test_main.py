@@ -186,6 +186,23 @@ Hello2!
         self.assertEqual(stderr.getvalue(), '')
 
 
+    def test_file_variable(self):
+        with create_test_files([
+            ('test.txt', 'Hello!')
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            file_path = os.path.join(temp_dir, 'test.txt')
+            file_path_var = os.path.join(temp_dir, '{{name}}.txt')
+            main(['-v', 'name', 'test', '-f', file_path_var])
+        self.assertEqual(stdout.getvalue(), f'''\
+<{file_path}>
+Hello!
+</{file_path}>
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
     def test_file_empty(self):
         with create_test_files([
             ('test.txt', '')
@@ -266,6 +283,23 @@ URL content
         self.assertEqual(stderr.getvalue(), '')
 
 
+    def test_url_variable(self):
+        with patch('urllib.request.urlopen') as mock_urlopen, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            mock_response = unittest.mock.MagicMock()
+            mock_response.read.return_value = b'URL content\n'
+            mock_urlopen.return_value.__enter__.return_value = mock_response
+
+            main(['-v', 'name', 'test', '-u', 'https://{{name}}.local'])
+        self.assertEqual(stdout.getvalue(), '''\
+<https://test.local>
+URL content
+</https://test.local>
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
     def test_url_empty(self):
         with patch('urllib.request.urlopen') as mock_urlopen, \
              patch('sys.stdout', StringIO()) as stdout, \
@@ -310,6 +344,24 @@ Error: Failed to fetch URL, "https://invalid.local"
 Hello!
 </{file_path}>
 
+<{sub_path}>
+Goodbye!
+</{sub_path}>
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_dir_variable(self):
+        with create_test_files([
+            (('subdir', 'sub.txt'), 'Goodbye!'),
+            (('subdir2', 'sub2.txt'), 'Goodbye2!')
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            sub_path = os.path.join(temp_dir, 'subdir', 'sub.txt')
+            sub_dir_var = os.path.join(temp_dir, '{{name}}')
+            main(['-v', 'name', 'subdir', '-d', sub_dir_var, '-x', 'txt'])
+        self.assertEqual(stdout.getvalue(), f'''\
 <{sub_path}>
 Goodbye!
 </{sub_path}>
