@@ -100,7 +100,7 @@ long!
             unknown_path = os.path.join('not-found', 'unknown.json')
             main(['-c', unknown_path, '-c', 'https://test.local/unknown.json'])
         self.assertEqual(stdout.getvalue(), f'''\
-Error: Failed to load configuration file, "{unknown_path}", with error: [Errno 2] No such file or directory: '{unknown_path}'
+Error: Failed to load configuration file, "{unknown_path}", with error: [Errno 2] No such file or directory: {repr(unknown_path)}
 
 Error: Failed to load configuration file, "https://test.local/unknown.json", with error: Boom!
 ''')
