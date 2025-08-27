@@ -2,4 +2,4 @@
 
 ## 1.0.0 (2025-08-27)
 
-- [3ee4088](https://github.com/craigahobbs/ctxkit/commit/3ee4088) - file, directory, and url variable tests
+- [dd8b4bf](https://github.com/craigahobbs/ctxkit/commit/dd8b4bf) - ctxkit 1.0.0
