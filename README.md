@@ -5,21 +5,54 @@
 [![GitHub](https://img.shields.io/github/license/craigahobbs/ctxkit)](https://github.com/craigahobbs/ctxkit/blob/main/LICENSE)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/ctxkit)](https://pypi.org/project/ctxkit/)
 
-ctxkit is a command line tool for constructing AI prompts containing files, directories, and URLs. For example:
+ctxkit is a command-line tool for constructing AI prompts containing files, directories, and URL
+content. For example:
 
 ```
 ctxkit -m "Please review the following source code file." -f main.py
 ```
 
-The `-m` argument includes the message text with the generated prompt. The `-f` argument includes
-the text of the given file, in this case `main.py`.
+In the preceding example, the `-m` argument outputs the message text, and the `-f` argument outputs
+the `main.py` file text as follows.
+
+```
+Please review the following source code file.
+
+<main.py>
+print('Hello, world!')
+</main.py>
+```
+
+
+### Copying Output
+
+To copy the output of ctxkit and paste it into your favorite AI chat application, pipe ctxkit's
+output into the clipboard tool for your platform.
+
+**macOS**
+
+```
+ctxkit -m "Hello!" | pbcopy
+```
+
+**Windows**
+
+```
+ctxkit -m "Hello!" | clip
+```
+
+**Linux**
+
+```
+ctxkit -m "Hello!" | xsel -ib
+```
 
 
 ## Usage
 
 Using the `ctxkit` command line application, you can add any number of ordered *context items* of
-the following types: configuration files (`-c`), messages (`-m`), URLs (`-u`), files (`-f`), and
-directories (`-d`).
+the following types: configuration files (`-c`), messages (`-m`), URL content (`-u`), files (`-f`),
+and directories (`-d`).
 
 ```
 usage: ctxkit [-h] [-g] [-c PATH] [-m TEXT] [-u URL] [-f PATH] [-d PATH]
@@ -51,7 +84,20 @@ ctxkit -v package ctxkit -m 'Write a 100 word or less description of the Python 
 
 ## Configuration Files
 
-ctxkit JSON configuration files allow you to contruct complex prompts in one or more JSON files.
+ctxkit JSON configuration files allow you to construct complex prompts in one or more JSON files.
+
+
+### Example: Writing Unit Tests
+
+TODO
+
+
+### Example: Writing MarkdownUp Applications
+
+TODO
+
+
+### Configuration File Format
 
 The ctxkit `-g` argument outputs the JSON configuration file format defined using the
 [Schema Markdown Language](https://craigahobbs.github.io/schema-markdown-js/language/).
