@@ -110,11 +110,6 @@ ctxkit -v base main -v scope "main function" -c unittest.json
 ```
 
 
-### Example: Create MarkdownUp Applications
-
-TODO
-
-
 ### Configuration File Format
 
 The ctxkit `-g` argument outputs the JSON configuration file format defined using the
