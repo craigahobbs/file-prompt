@@ -80,6 +80,7 @@ def _process_config(config, variables, root_dir='.'):
             config_path = item['config']
 
             # Load the config path or URL
+            config_error = None
             try:
                 if re.match(_R_URL, config_path):
                     with urllib.request.urlopen(config_path) as config_response:
@@ -90,14 +91,15 @@ def _process_config(config, variables, root_dir='.'):
                     with open(config_path, 'r', encoding='utf-8') as config_file:
                         config_text = config_file.read()
                 config = json.loads(config_text)
-            except:
+            except Exception as exc:
                 config = None
+                config_error = str(exc)
 
             # Process the config file
             if config is None:
                 if not is_first:
                     print()
-                print(f'Error: Failed to load configuration file, "{config_path}"')
+                print(f'Error: Failed to load configuration file, "{config_path}", with error: {config_error}')
             else:
                 # Validate the configuration
                 config = schema_markdown.validate_type(CTXKIT_TYPES, 'CtxKitConfig', config)
