@@ -109,7 +109,7 @@ def _process_config(config, variables, root_dir='.'):
 
         # File item
         elif item_key == 'file':
-            file_path = item['file']
+            file_path = _replace_variables(item['file'], variables)
             if not os.path.isabs(file_path):
                 file_path = os.path.normpath(os.path.join(root_dir, file_path))
 
@@ -131,7 +131,7 @@ def _process_config(config, variables, root_dir='.'):
         # Directory item
         elif item_key == 'dir':
             # Recursively find the files of the requested extensions
-            dir_path = item['dir']['path']
+            dir_path = _replace_variables(item['dir']['path'], variables)
             if not os.path.isabs(dir_path):
                 dir_path = os.path.normpath(os.path.join(root_dir, dir_path))
             dir_exts = [f'.{ext.lstrip(".")}' for ext in item['dir'].get('exts') or []]
@@ -160,7 +160,7 @@ def _process_config(config, variables, root_dir='.'):
         # URL item
         elif item_key == 'url':
             # Get the URL resource text
-            url = item['url']
+            url = _replace_variables(item['url'], variables)
             try:
                 with urllib.request.urlopen(item['url']) as response:
                     url_text = response.read().strip().decode('utf-8')

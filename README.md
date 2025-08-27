@@ -87,12 +87,30 @@ ctxkit -v package ctxkit -m 'Write a 100 word or less description of the Python 
 ctxkit JSON configuration files allow you to construct complex prompts in one or more JSON files.
 
 
-### Example: Writing Unit Tests
+### Example: Write Unit Tests
 
-TODO
+To generate a prompt to write unit tests for a function or method in a module, create a
+configuration file similar to the following:
+
+```json
+{
+    "items": [
+        {"message": "Write the unit test methods to cover the code in the {{scope}}."},
+        {"file": "src/my_package/{{base}}.py"},
+        {"file": "src/tests/test_{{base}}.py"}
+    ]
+}
+```
+
+In this example, the "scope" variable allows you to specify what you want to write unit tests for.
+The "base" variable specifies the base sub-module name. To generate the prompt, run ctxkit:
+
+```
+ctxkit -v base main -v scope "main function" -c unittest.json
+```
 
 
-### Example: Writing MarkdownUp Applications
+### Example: Create MarkdownUp Applications
 
 TODO
 
