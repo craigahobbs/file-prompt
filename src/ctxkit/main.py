@@ -39,7 +39,7 @@ def main(argv=None):
     parser.add_argument('-l', '--depth', metavar='N', type=int, default=0,
                         help='the maximum directory depth, default is 0 (infinite)')
     parser.add_argument('-v', '--var', nargs=2, metavar=('VAR', 'EXPR'), dest='items', action=TypedItemAction,
-                        help='define a message variable (reference with "{{var}}")')
+                        help='define a variable (reference with "{{var}}")')
     args = parser.parse_args(args=argv)
     if args.config_help:
         parser.exit(message=CTXKIT_SMD)
@@ -215,7 +215,7 @@ class TypedItemAction(argparse.Action):
         getattr(namespace, self.dest).append((type_id, values))
 
 
-# Helper to replace message variables
+# Helper to replace variable references
 def _replace_variables(text, variables):
     return _R_VARIABLE.sub(partial(_replace_variables_match, variables), text)
 
@@ -276,7 +276,7 @@ union CtxKitItem
     # URL include
     string url
 
-    # Set a message variable (reference with "{{var}}")
+    # Set a variable (reference with "{{var}}")
     CtxKitVariable var
 
 

@@ -8,7 +8,7 @@
 ctxkit is a command-line tool for constructing AI prompts containing files, directories, and URL
 content. For example:
 
-```
+```sh
 ctxkit -m "Please review the following source code file." -f main.py
 ```
 
@@ -31,19 +31,19 @@ output into the clipboard tool for your platform.
 
 **macOS**
 
-```
+```sh
 ctxkit -m "Hello!" | pbcopy
 ```
 
 **Windows**
 
-```
+```sh
 ctxkit -m "Hello!" | clip
 ```
 
 **Linux**
 
-```
+```sh
 ctxkit -m "Hello!" | xsel -ib
 ```
 
@@ -68,16 +68,17 @@ options:
   -d, --dir PATH      include a directory's files
   -x, --ext EXT       include files with the extension
   -l, --depth N       the maximum directory depth, default is 0 (infinite)
-  -v, --var VAR EXPR  define a message variable (reference with "{{var}}")
+  -v, --var VAR EXPR  define a variable (reference with "{{var}}")
 ```
 
 
-### Message Variables
+### Variables
 
-You can specify one or more variable references in a message's text using the syntax, `{{var}}`. A
-variable's value is specified using the `-v` argument. For example:
+You can specify one or more variable references in a message's text, a file path, a directory path,
+or a URL using the syntax, `{{var}}`. A variable's value is specified using the `-v` argument. For
+example:
 
-```
+```sh
 ctxkit -v package ctxkit -m 'Write a 100 word or less description of the Python "{{package}}"'
 ```
 
@@ -105,7 +106,7 @@ configuration file similar to the following:
 In this example, the "scope" variable allows you to specify what you want to write unit tests for.
 The "base" variable specifies the base sub-module name. To generate the prompt, run ctxkit:
 
-```
+```sh
 ctxkit -v base main -v scope "main function" -c unittest.json
 ```
 
@@ -115,7 +116,7 @@ ctxkit -v base main -v scope "main function" -c unittest.json
 The ctxkit `-g` argument outputs the JSON configuration file format defined using the
 [Schema Markdown Language](https://craigahobbs.github.io/schema-markdown-js/language/).
 
-```
+```schema-markdown
 # The ctxkit configuration file format
 struct CtxKitConfig
 
@@ -144,7 +145,7 @@ union CtxKitItem
     # URL include
     string url
 
-    # Set a message variable (reference with "{{var}}")
+    # Set a variable (reference with "{{var}}")
     CtxKitVariable var
 
 
