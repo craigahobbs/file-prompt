@@ -1,0 +1,17 @@
+{
+    "items": [
+        {"long": [
+            "I'd like you to port the JavaScript code (see below) to Python. Please respect the following rules:",
+            "",
+            "- Port all JavaScript global constants and functions in order",
+            "- Bring across all comments",
+            "- Convert jsdoc comments to sphinx",
+            "- Use all PEP8 conventions",
+            "- Don't use type annotations",
+            "- Be aware of JavaScript `\\k<name>` syntax when porting regular expressions"
+        ]},
+        {"url": "https://raw.githubusercontent.com/craigahobbs/markdown-model/refs/heads/main/lib/parser.js"},
+        {"message": "Here's the Markdown Model definition:"},
+        {"url": "https://raw.githubusercontent.com/craigahobbs/markdown-model/refs/heads/main/lib/model.js"}
+    ]
+}
