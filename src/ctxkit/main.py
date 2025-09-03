@@ -10,6 +10,7 @@ from functools import partial
 import json
 import os
 import re
+import sys
 import urllib.request
 
 import schema_markdown
@@ -23,38 +24,41 @@ def main(argv=None):
     # Command line arguments
     parser = argparse.ArgumentParser(prog='ctxkit')
     parser.add_argument('-g', '--config-help', action='store_true',
-                        help='display the ctxkit config file format')
+                        help='display the JSON configuration file format')
     parser.add_argument('-c', '--config', metavar='PATH', dest='items', action=TypedItemAction,
-                        help='include the ctxkit config')
+                        help='process the JSON configuration file path or URL')
     parser.add_argument('-m', '--message', metavar='TEXT', dest='items', action=TypedItemAction,
-                        help='include the prompt message')
-    parser.add_argument('-u', '--url', metavar='URL', dest='items', action=TypedItemAction,
-                        help='include the URL')
+                        help='add a prompt message')
+    parser.add_argument('-i', '--include', metavar='PATH', dest='items', action=TypedItemAction,
+                        help='add the file path or URL text')
     parser.add_argument('-f', '--file', metavar='PATH', dest='items', action=TypedItemAction,
-                        help='include the file')
+                        help='add the file path or URL as a text file')
     parser.add_argument('-d', '--dir', metavar='PATH', dest='items', action=TypedItemAction,
-                        help="include a directory's files")
+                        help="add a directory's text files")
     parser.add_argument('-x', '--ext', metavar='EXT', action='append', default=[],
-                        help='include files with the extension')
+                        help='add a directory text file extension')
     parser.add_argument('-l', '--depth', metavar='N', type=int, default=0,
                         help='the maximum directory depth, default is 0 (infinite)')
     parser.add_argument('-v', '--var', nargs=2, metavar=('VAR', 'EXPR'), dest='items', action=TypedItemAction,
                         help='define a variable (reference with "{{var}}")')
     args = parser.parse_args(args=argv)
+
+    # Show configuration file format?
     if args.config_help:
-        parser.exit(message=CTXKIT_SMD)
+        print(CTXKIT_SMD.strip())
+        return
 
     # Load the config file
     config = {'items': []}
     for item_type, item_value in (args.items or []):
         if item_type == 'c':
             config['items'].append({'config': item_value})
+        elif item_type == 'i':
+            config['items'].append({'include': item_value})
         elif item_type == 'f':
             config['items'].append({'file': item_value})
         elif item_type == 'd':
             config['items'].append({'dir': {'path': item_value, 'exts': args.ext, 'depth': args.depth}})
-        elif item_type == 'u':
-            config['items'].append({'url': item_value})
         elif item_type == 'v':
             config['items'].append({'var': {'name': item_value[0], 'value': item_value[1]}})
         else: # if item_type == 'm':
@@ -66,7 +70,11 @@ def main(argv=None):
     config = schema_markdown.validate_type(CTXKIT_TYPES, 'CtxKitConfig', config)
 
     # Process the configuration
-    _process_config(config, {})
+    try:
+        _process_config(config, {})
+    except Exception as exc:
+        print(f'Error: {exc}', file=sys.stderr)
+        sys.exit(2)
 
 
 def _process_config(config, variables, root_dir='.'):
@@ -75,105 +83,56 @@ def _process_config(config, variables, root_dir='.'):
     for item in config['items']:
         item_key = list(item.keys())[0]
 
+        # Get the item path, if any
+        item_path = None
+        if item_key in ('config', 'include', 'file'):
+            item_path = _replace_variables(item[item_key], variables)
+        elif item_key == 'dir':
+            item_path = _replace_variables(item[item_key]['path'], variables)
+
+        # Normalize the item path
+        if item_path is not None and not _is_url(item_path) and not os.path.isabs(item_path):
+            item_path = os.path.normpath(os.path.join(root_dir, item_path))
+
         # Config item
         if item_key == 'config':
-            config_path = item['config']
+            config = schema_markdown.validate_type(CTXKIT_TYPES, 'CtxKitConfig', json.loads(_fetch_text(item_path)))
+            _process_config(config, variables, os.path.dirname(item_path))
 
-            # Load the config path or URL
-            config_error = None
-            try:
-                if re.match(_R_URL, config_path):
-                    with urllib.request.urlopen(config_path) as config_response:
-                        config_text = config_response.read().decode('utf-8')
-                else:
-                    if not os.path.isabs(config_path):
-                        config_path = os.path.normpath(os.path.join(root_dir, config_path))
-                    with open(config_path, 'r', encoding='utf-8') as config_file:
-                        config_text = config_file.read()
-                config = json.loads(config_text)
-            except Exception as exc:
-                config = None
-                config_error = str(exc)
-
-            # Process the config file
-            if config is None:
-                if not is_first:
-                    print()
-                print(f'Error: Failed to load configuration file, "{config_path}", with error: {config_error}')
-            else:
-                # Validate the configuration
-                config = schema_markdown.validate_type(CTXKIT_TYPES, 'CtxKitConfig', config)
-
-                # Process the configuration
-                _process_config(config, variables, os.path.dirname(config_path))
+        # File include item
+        elif item_key == 'include':
+            if not is_first:
+                print()
+            print(_fetch_text(item_path))
 
         # File item
         elif item_key == 'file':
-            file_path = _replace_variables(item['file'], variables)
-            if not os.path.isabs(file_path):
-                file_path = os.path.normpath(os.path.join(root_dir, file_path))
-
-            # Read the file
-            try:
-                with open(file_path, 'r', encoding='utf-8') as file_file:
-                    file_text = file_file.read().strip()
-            except:
-                file_text = f'Error: File not found, "{file_path}"'
-
-            # Output the file
             if not is_first:
                 print()
-            print(f'<{file_path}>')
+            file_text = _fetch_text(item_path)
+            print(f'<{item_path}>')
             if file_text:
                 print(file_text)
-            print(f'</{file_path}>')
+            print(f'</{item_path}>')
 
         # Directory item
         elif item_key == 'dir':
             # Recursively find the files of the requested extensions
-            dir_path = _replace_variables(item['dir']['path'], variables)
-            if not os.path.isabs(dir_path):
-                dir_path = os.path.normpath(os.path.join(root_dir, dir_path))
             dir_exts = [f'.{ext.lstrip(".")}' for ext in item['dir'].get('exts') or []]
             dir_depth = item['dir'].get('depth', 0)
-            try:
-                dir_files = list(_get_directory_files(dir_path, dir_exts, dir_depth))
-            except:
-                dir_files = []
+            dir_files = list(_get_directory_files(item_path, dir_exts, dir_depth))
+            if not dir_files:
+                raise Exception(f'No files found, "{item_path}"')
 
             # Output the file text
-            if not dir_files:
-                if not is_first:
+            for ix_file, file_path in enumerate(dir_files):
+                if not is_first or ix_file != 0:
                     print()
-                print(f'Error: No files found, "{dir_path}"')
-            else:
-                for ix_file, file_path in enumerate(dir_files):
-                    if not is_first or ix_file != 0:
-                        print()
-                    print(f'<{file_path}>')
-                    with open(file_path, 'r', encoding='utf-8') as file_file:
-                        file_text = file_file.read().strip()
-                    if file_text:
-                        print(file_text)
-                    print(f'</{file_path}>')
-
-        # URL item
-        elif item_key == 'url':
-            # Get the URL resource text
-            url = _replace_variables(item['url'], variables)
-            try:
-                with urllib.request.urlopen(item['url']) as response:
-                    url_text = response.read().strip().decode('utf-8')
-            except:
-                url_text = f'Error: Failed to fetch URL, "{url}"'
-
-            # Output the URL resource text
-            if not is_first:
-                print()
-            print(f'<{url}>')
-            if url_text:
-                print(url_text)
-            print(f'</{url}>')
+                file_text = _fetch_text(file_path)
+                print(f'<{file_path}>')
+                if file_text:
+                    print(file_text)
+                print(f'</{file_path}>')
 
         # Variable definition item
         elif item_key == 'var':
@@ -197,8 +156,21 @@ def _process_config(config, variables, root_dir='.'):
             is_first = False
 
 
-# Regular expression to match a URL
+# Helper to determine if a path is a URL
+def _is_url(path):
+    return re.match(_R_URL, path)
+
 _R_URL = re.compile(r'^[a-z]+:')
+
+
+# Helper to fetch a file or URL text
+def _fetch_text(path):
+    if _is_url(path):
+        with urllib.request.urlopen(path) as response:
+            return response.read().decode('utf-8').strip()
+    else:
+        with open(path, 'r', encoding='utf-8') as file:
+            return file.read().strip()
 
 
 # Prompt item argument type
@@ -258,7 +230,7 @@ struct CtxKitConfig
 # A prompt item
 union CtxKitItem
 
-    # Config file include
+    # Config file path or URL
     string config
 
     # A prompt message
@@ -267,23 +239,23 @@ union CtxKitItem
     # A long prompt message
     string[len > 0] long
 
-    # File include path
+    # File path or URL text
+    string include
+
+    # File path or URL as a text file
     string file
 
-    # Directory include
+    # Add a directory's text files
     CtxKitDir dir
-
-    # URL include
-    string url
 
     # Set a variable (reference with "{{var}}")
     CtxKitVariable var
 
 
-# A directory include item
+# A directory item
 struct CtxKitDir
 
-    # The directory path
+    # The directory file path or URL
     string path
 
     # The file extensions to include (e.g. ".py")

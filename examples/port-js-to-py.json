@@ -10,8 +10,8 @@
             "- Don't use type annotations",
             "- Be aware of JavaScript `\\k<name>` syntax when porting regular expressions"
         ]},
-        {"url": "https://raw.githubusercontent.com/craigahobbs/markdown-model/refs/heads/main/lib/parser.js"},
+        {"file": "https://raw.githubusercontent.com/craigahobbs/markdown-model/refs/heads/main/lib/parser.js"},
         {"message": "Here's the Markdown Model definition:"},
-        {"url": "https://raw.githubusercontent.com/craigahobbs/markdown-model/refs/heads/main/lib/model.js"}
+        {"file": "https://raw.githubusercontent.com/craigahobbs/markdown-model/refs/heads/main/lib/model.js"}
     ]
 }

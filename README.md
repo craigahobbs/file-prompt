@@ -51,22 +51,22 @@ ctxkit -m "Hello!" | xsel -ib
 ## Usage
 
 Using the `ctxkit` command line application, you can add any number of ordered *context items* of
-the following types: configuration files (`-c`), messages (`-m`), URL content (`-u`), files (`-f`),
-and directories (`-d`).
+the following types: configuration files (`-c`), messages (`-m`), file path or URL content (`-i` and
+`-f`), and directories (`-d`).
 
 ```
-usage: ctxkit [-h] [-g] [-c PATH] [-m TEXT] [-u URL] [-f PATH] [-d PATH]
+usage: ctxkit [-h] [-g] [-c PATH] [-m TEXT] [-i PATH] [-f PATH] [-d PATH]
               [-x EXT] [-l N] [-v VAR EXPR]
 
 options:
   -h, --help          show this help message and exit
-  -g, --config-help   display the ctxkit config file format
-  -c, --config PATH   include the ctxkit config
-  -m, --message TEXT  include the prompt message
-  -u, --url URL       include the URL
-  -f, --file PATH     include the file
-  -d, --dir PATH      include a directory's files
-  -x, --ext EXT       include files with the extension
+  -g, --config-help   display the JSON configuration file format
+  -c, --config PATH   process the JSON configuration file path or URL
+  -m, --message TEXT  add a prompt message
+  -i, --include PATH  add the file path or URL text
+  -f, --file PATH     add the file path or URL as a text file
+  -d, --dir PATH      add a directory's text files
+  -x, --ext EXT       add a directory text file extension
   -l, --depth N       the maximum directory depth, default is 0 (infinite)
   -v, --var VAR EXPR  define a variable (reference with "{{var}}")
 ```
@@ -127,7 +127,7 @@ struct CtxKitConfig
 # A prompt item
 union CtxKitItem
 
-    # Config file include
+    # Config file path or URL
     string config
 
     # A prompt message
@@ -136,23 +136,23 @@ union CtxKitItem
     # A long prompt message
     string[len > 0] long
 
-    # File include path
+    # File path or URL text
+    string include
+
+    # File path or URL as a text file
     string file
 
-    # Directory include
+    # Add a directory's text files
     CtxKitDir dir
-
-    # URL include
-    string url
 
     # Set a variable (reference with "{{var}}")
     CtxKitVariable var
 
 
-# A directory include item
+# A directory item
 struct CtxKitDir
 
-    # The directory path
+    # The directory file path or URL
     string path
 
     # The file extensions to include (e.g. ".py")

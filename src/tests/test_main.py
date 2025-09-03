@@ -9,8 +9,6 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
-import schema_markdown
-
 import ctxkit.__main__
 from ctxkit.main import main
 
@@ -41,11 +39,9 @@ class TestMain(unittest.TestCase):
     def test_help_config(self):
         with patch('sys.stdout', StringIO()) as stdout, \
              patch('sys.stderr', StringIO()) as stderr:
-            with self.assertRaises(SystemExit) as cm_exc:
-                main(['-g'])
-        self.assertEqual(cm_exc.exception.code, 0)
-        self.assertEqual(stdout.getvalue(), '')
-        self.assertTrue(stderr.getvalue().startswith('# The ctxkit configuration file format'))
+            main(['-g'])
+        self.assertTrue(stdout.getvalue().startswith('# The ctxkit configuration file format'))
+        self.assertEqual(stderr.getvalue(), '')
 
 
     def test_no_items(self):
@@ -98,13 +94,13 @@ long!
              patch('sys.stderr', StringIO()) as stderr:
             mock_urlopen.side_effect = Exception('Boom!')
             unknown_path = os.path.join('not-found', 'unknown.json')
-            main(['-c', unknown_path, '-c', 'https://test.local/unknown.json'])
-        self.assertEqual(stdout.getvalue(), f'''\
-Error: Failed to load configuration file, "{unknown_path}", with error: [Errno 2] No such file or directory: {unknown_path!r}
-
-Error: Failed to load configuration file, "https://test.local/unknown.json", with error: Boom!
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-c', unknown_path, '-c', 'https://test.local/unknown.json'])
+        self.assertEqual(cm_exc.exception.code, 2)
+        self.assertEqual(stdout.getvalue(), '')
+        self.assertEqual(stderr.getvalue(), f'''\
+Error: [Errno 2] No such file or directory: {unknown_path!r}
 ''')
-        self.assertEqual(stderr.getvalue(), '')
 
 
     def test_config_url(self):
@@ -157,11 +153,98 @@ Main message
         ]) as temp_dir, \
              patch('sys.stdout', StringIO()) as stdout, \
              patch('sys.stderr', StringIO()) as stderr:
-            with self.assertRaises(schema_markdown.ValidationError) as cm_exc:
+            with self.assertRaises(SystemExit) as cm_exc:
                 main(['-c', os.path.join(temp_dir, 'invalid.json')])
-        self.assertEqual(str(cm_exc.exception), "Unknown member 'items.0.invalid'")
+        self.assertEqual(cm_exc.exception.code, 2)
         self.assertEqual(stdout.getvalue(), '')
+        self.assertEqual(stderr.getvalue(), '''\
+Error: Unknown member 'items.0.invalid'
+''')
+
+
+    def test_include(self):
+        with create_test_files([
+            ('test.txt', 'Hello!'),
+            ('test2.txt', 'Hello2!')
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            file_path = os.path.join(temp_dir, 'test.txt')
+            file_path2 = os.path.join(temp_dir, 'test2.txt')
+            main(['-i', file_path, '-i', file_path2])
+        self.assertEqual(stdout.getvalue(), '''\
+Hello!
+
+Hello2!
+''')
         self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_include_url(self):
+        with patch('urllib.request.urlopen') as mock_urlopen, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            mock_response = unittest.mock.MagicMock()
+            mock_response.read.return_value = b'URL content\n'
+            mock_urlopen.return_value.__enter__.return_value = mock_response
+            main(['-i', 'https://test.local'])
+        self.assertEqual(stdout.getvalue(), '''\
+URL content
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_include_variable(self):
+        with create_test_files([
+            ('test.txt', 'Hello!')
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            file_path_var = os.path.join(temp_dir, '{{name}}.txt')
+            main(['-v', 'name', 'test', '-i', file_path_var])
+        self.assertEqual(stdout.getvalue(), '''\
+Hello!
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_include_empty(self):
+        with create_test_files([
+            ('test.txt', '')
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            file_path = os.path.join(temp_dir, 'test.txt')
+            main(['-i', file_path])
+        self.assertEqual(stdout.getvalue(), '\n')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_include_strip(self):
+        with create_test_files([
+            ('test.txt', '\nHello!\n')
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            file_path = os.path.join(temp_dir, 'test.txt')
+            main(['-i', file_path])
+        self.assertEqual(stdout.getvalue(), '''\
+Hello!
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_include_error(self):
+        with patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            unknown_path = os.path.join('not-found', 'unknown.txt')
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-i', unknown_path])
+        self.assertEqual(cm_exc.exception.code, 2)
+        self.assertEqual(stdout.getvalue(), '')
+        self.assertEqual(stderr.getvalue(), f'''\
+Error: [Errno 2] No such file or directory: '{unknown_path}'
+''')
 
 
     def test_file(self):
@@ -182,6 +265,22 @@ Hello!
 <{file_path2}>
 Hello2!
 </{file_path2}>
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+    def test_file_url(self):
+        with patch('urllib.request.urlopen') as mock_urlopen, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            mock_response = unittest.mock.MagicMock()
+            mock_response.read.return_value = b'URL content\n'
+            mock_urlopen.return_value.__enter__.return_value = mock_response
+            main(['-f', 'https://test.local'])
+        self.assertEqual(stdout.getvalue(), '''\
+<https://test.local>
+URL content
+</https://test.local>
 ''')
         self.assertEqual(stderr.getvalue(), '')
 
@@ -234,99 +333,17 @@ Hello!
         self.assertEqual(stderr.getvalue(), '')
 
 
-    def test_file_relative_not_found(self):
+    def test_file_error(self):
         with patch('sys.stdout', StringIO()) as stdout, \
              patch('sys.stderr', StringIO()) as stderr:
             unknown_path = os.path.join('not-found', 'unknown.txt')
-            main(['-f', unknown_path])
-        self.assertEqual(stdout.getvalue(), f'''\
-<{unknown_path}>
-Error: File not found, "{unknown_path}"
-</{unknown_path}>
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-f', unknown_path])
+        self.assertEqual(cm_exc.exception.code, 2)
+        self.assertEqual(stdout.getvalue(), '')
+        self.assertEqual(stderr.getvalue(), f'''\
+Error: [Errno 2] No such file or directory: '{unknown_path}'
 ''')
-        self.assertEqual(stderr.getvalue(), '')
-
-
-    def test_url(self):
-        with patch('urllib.request.urlopen') as mock_urlopen, \
-             patch('sys.stdout', StringIO()) as stdout, \
-             patch('sys.stderr', StringIO()) as stderr:
-            mock_response = unittest.mock.MagicMock()
-            mock_response.read.return_value = b'URL content\n'
-            mock_urlopen.return_value.__enter__.return_value = mock_response
-
-            main(['-u', 'https://test.local'])
-        self.assertEqual(stdout.getvalue(), '''\
-<https://test.local>
-URL content
-</https://test.local>
-''')
-        self.assertEqual(stderr.getvalue(), '')
-
-
-    def test_url_second(self):
-        with patch('urllib.request.urlopen') as mock_urlopen, \
-             patch('sys.stdout', StringIO()) as stdout, \
-             patch('sys.stderr', StringIO()) as stderr:
-            mock_response = unittest.mock.MagicMock()
-            mock_response.read.return_value = b'URL content\n'
-            mock_urlopen.return_value.__enter__.return_value = mock_response
-
-            main(['-m', 'Hello!', '-u', 'https://test.local'])
-        self.assertEqual(stdout.getvalue(), '''\
-Hello!
-
-<https://test.local>
-URL content
-</https://test.local>
-''')
-        self.assertEqual(stderr.getvalue(), '')
-
-
-    def test_url_variable(self):
-        with patch('urllib.request.urlopen') as mock_urlopen, \
-             patch('sys.stdout', StringIO()) as stdout, \
-             patch('sys.stderr', StringIO()) as stderr:
-            mock_response = unittest.mock.MagicMock()
-            mock_response.read.return_value = b'URL content\n'
-            mock_urlopen.return_value.__enter__.return_value = mock_response
-
-            main(['-v', 'name', 'test', '-u', 'https://{{name}}.local'])
-        self.assertEqual(stdout.getvalue(), '''\
-<https://test.local>
-URL content
-</https://test.local>
-''')
-        self.assertEqual(stderr.getvalue(), '')
-
-
-    def test_url_empty(self):
-        with patch('urllib.request.urlopen') as mock_urlopen, \
-             patch('sys.stdout', StringIO()) as stdout, \
-             patch('sys.stderr', StringIO()) as stderr:
-            mock_response = unittest.mock.MagicMock()
-            mock_response.read.return_value = b''
-            mock_urlopen.return_value.__enter__.return_value = mock_response
-            main(['-u', 'https://test.local'])
-        self.assertEqual(stdout.getvalue(), '''\
-<https://test.local>
-</https://test.local>
-''')
-        self.assertEqual(stderr.getvalue(), '')
-
-
-    def test_url_exception(self):
-        with patch('urllib.request.urlopen') as mock_urlopen, \
-             patch('sys.stdout', StringIO()) as stdout, \
-             patch('sys.stderr', StringIO()) as stderr:
-            mock_urlopen.side_effect = Exception('Boom!')
-            main(['-u', 'https://invalid.local'])
-        self.assertEqual(stdout.getvalue(), '''\
-<https://invalid.local>
-Error: Failed to fetch URL, "https://invalid.local"
-</https://invalid.local>
-''')
-        self.assertEqual(stderr.getvalue(), '')
 
 
     def test_dir(self):
@@ -407,11 +424,13 @@ Hello!
         ]) as temp_dir, \
              patch('sys.stdout', StringIO()) as stdout, \
              patch('sys.stderr', StringIO()) as stderr:
-            main(['-d', temp_dir, '-x', 'txt'])
-        self.assertEqual(stdout.getvalue(), f'''\
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-d', temp_dir, '-x', 'txt'])
+        self.assertEqual(cm_exc.exception.code, 2)
+        self.assertEqual(stdout.getvalue(), '')
+        self.assertEqual(stderr.getvalue(), f'''\
 Error: No files found, "{temp_dir}"
 ''')
-        self.assertEqual(stderr.getvalue(), '')
 
 
     def test_dir_relative_not_found(self):
@@ -419,13 +438,13 @@ Error: No files found, "{temp_dir}"
              patch('sys.stderr', StringIO()) as stderr:
             unknown_path = os.path.join('not-found', 'unknown')
             unknown_path2 = os.path.join('not-found', 'unknown2')
-            main(['-d', unknown_path, '-d', unknown_path2, '-x', 'txt'])
-        self.assertEqual(stdout.getvalue(), f'''\
-Error: No files found, "{unknown_path}"
-
-Error: No files found, "{unknown_path2}"
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['-d', unknown_path, '-d', unknown_path2, '-x', 'txt'])
+        self.assertEqual(cm_exc.exception.code, 2)
+        self.assertEqual(stdout.getvalue(), '')
+        self.assertEqual(stderr.getvalue(), f'''\
+Error: [Errno 2] No such file or directory: '{unknown_path}'
 ''')
-        self.assertEqual(stderr.getvalue(), '')
 
 
     def test_variable(self):
