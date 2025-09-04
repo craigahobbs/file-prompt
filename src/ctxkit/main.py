@@ -77,9 +77,8 @@ def main(argv=None):
         sys.exit(2)
 
 
-def _process_config(config, variables, root_dir='.'):
+def _process_config(config, variables, root_dir='.', is_first=True):
     # Output the prompt items
-    is_first = True
     for item in config['items']:
         item_key = list(item.keys())[0]
 
@@ -97,7 +96,7 @@ def _process_config(config, variables, root_dir='.'):
         # Config item
         if item_key == 'config':
             config = schema_markdown.validate_type(CTXKIT_TYPES, 'CtxKitConfig', json.loads(_fetch_text(item_path)))
-            _process_config(config, variables, os.path.dirname(item_path))
+            is_first = _process_config(config, variables, os.path.dirname(item_path), is_first)
 
         # File include item
         elif item_key == 'include':
@@ -152,8 +151,10 @@ def _process_config(config, variables, root_dir='.'):
             print(_replace_variables(item['message'], variables))
 
         # Set not first
-        if is_first and item_key != 'var':
+        if is_first and item_key not in ('config', 'var'):
             is_first = False
+
+    return is_first
 
 
 # Helper to determine if a path is a URL

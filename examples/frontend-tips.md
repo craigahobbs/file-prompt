@@ -78,3 +78,19 @@ Here are a few tips for generating BareScript code:
 
    myAppMain()
    ```
+
+7. Always follow the BareScript common blank line rules:
+
+   - ensure function definitions and global statement groups are separated by two blank lines
+
+   - within functions, ensure code statement groups are separated by a single blank line
+
+   - within conditional blocks, ensure code statement groups are separated by a single blank line
+
+8. Always follow the BareScript common commenting rules:
+
+   - ensure function definitions and global statement groups are adequately commented
+
+   - within functions, ensure code statement groups are adequately commented
+
+   - within conditional blocks, ensure code statement groups are adequately commented

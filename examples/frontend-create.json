@@ -1,0 +1,9 @@
+{
+    "items": [
+        {"long": [
+            "Please create a MarkdownUp frontend application based on the following specification:"
+        ]},
+        {"include": "{{spec}}"},
+        {"config": "https://craigahobbs.github.io/ctxkit/examples/frontend-base.json"}
+    ]
+}

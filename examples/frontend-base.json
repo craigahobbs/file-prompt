@@ -1,28 +1,46 @@
 {
     "items": [
         {"long": [
-            "You are the MarkdownUp Frontend Application creator. You write MarkdownUp frontend applications in",
-            "BareScript based on an application specification. Below are the necessary materials for you to complete",
-            "your task. The application specification is included at the end."
-        ]},
-        {"long": [
+            "==========",
+            "",
             "Here is the MarkdownUp backend application readme. Please refer to the section called",
             "\"MarkdownUp Applications\" for information on how to create MarkdownUp frontend applications."
         ]},
         {"file": "https://craigahobbs.github.io/markdown-up-py/README.md"},
         {"long": [
-            "Here are the language references for the BareScript and Schema Markdown languages."
+            "==========",
+            "",
+            "Here is the BareScript language reference:"
         ]},
         {"file": "https://craigahobbs.github.io/bare-script/language/README.md"},
-        {"file": "frontend-barescript-tips.md"},
+        {"long": [
+            "==========",
+            "",
+            "Here is the Schema Markdown language referece:"
+        ]},
         {"file": "https://craigahobbs.github.io/schema-markdown-js/language/README.md"},
         {"long": [
-            "Here is the BareScript library and BareScript include library documentation."
+            "==========",
+            "",
+            "Here are some tips for MarkdownUp frontend application development:"
+        ]},
+        {"file": "frontend-tips.md"},
+        {"long": [
+            "==========",
+            "",
+            "Here is the MarkdownUp library documentation:"
         ]},
         {"file": "https://craigahobbs.github.io/markdown-up/library/markdownup-library.md"},
+        {"long": [
+            "==========",
+            "",
+            "Here is the MarkdownUp include library documentation:"
+        ]},
         {"file": "https://craigahobbs.github.io/markdown-up/library/markdownup-include-library.md"},
         {"long": [
-            "Here are some sample applications."
+            "==========",
+            "",
+            "Here are some sample applications:"
         ]},
         {"file": "https://craigahobbs.github.io/happy-holidays/happy-holidays.md"},
         {"file": "https://craigahobbs.github.io/mandelbrot/mandelbrot.md"},
@@ -31,8 +49,9 @@
         {"file": "https://craigahobbs.github.io/chaosBalls/chaosBalls.md"},
         {"file": "https://craigahobbs.github.io/life/life.md"},
         {"long": [
-            "Here is the application specification. If it is not provided below, just respond",
-            "\"No application specification provided.\""
+            "==========",
+            "",
+            "Important: Please respect the BareScript commont blank line rules."
         ]}
     ]
 }

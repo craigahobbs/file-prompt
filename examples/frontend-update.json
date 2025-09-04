@@ -1,0 +1,13 @@
+{
+    "items": [
+        {"long": [
+            "Please make the following update to the MarkdownUp frontend application, \"{{app}}\" (included below):"
+        ]},
+        {"include": "{{spec}}"},
+        {"long": [
+            "Here is the MarkdownUp frontend application source:"
+        ]},
+        {"file": "{{app}}"},
+        {"config": "https://craigahobbs.github.io/ctxkit/examples/frontend-base.json"}
+    ]
+}

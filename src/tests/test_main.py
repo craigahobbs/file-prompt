@@ -88,6 +88,57 @@ long!
         self.assertEqual(stderr.getvalue(), '')
 
 
+    def test_config_first_outer(self):
+        with create_test_files([
+            ('test.json', json.dumps({
+                'items': [
+                    {'message': 'test1'},
+                    {'config': 'test2.json'}
+                ]
+            })),
+            ('test2.json', json.dumps({
+                'items': [
+                    {'long': ['test2']}
+                ]
+            }))
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            main(['-c', os.path.join(temp_dir, 'test.json')])
+        self.assertEqual(stdout.getvalue(), '''\
+test1
+
+test2
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
+
+    def test_config_first_inner(self):
+        with create_test_files([
+            ('test.json', json.dumps({
+                'items': [
+                    {'config': 'test2.json'},
+                    {'message': 'test1'}
+                ]
+            })),
+            ('test2.json', json.dumps({
+                'items': [
+                    {'long': ['test2']}
+                ]
+            }))
+        ]) as temp_dir, \
+             patch('sys.stdout', StringIO()) as stdout, \
+             patch('sys.stderr', StringIO()) as stderr:
+            main(['-c', os.path.join(temp_dir, 'test.json')])
+        self.assertEqual(stdout.getvalue(), '''\
+test2
+
+test1
+''')
+        self.assertEqual(stderr.getvalue(), '')
+
+
     def test_config_failure(self):
         with patch('urllib.request.urlopen') as mock_urlopen, \
              patch('sys.stdout', StringIO()) as stdout, \
