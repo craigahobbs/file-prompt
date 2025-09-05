@@ -23,27 +23,27 @@ XAI_URL = 'https://api.x.ai/v1/chat/completions'
 
 
 def grok_chat(model, prompt, temperature=1.0):
+    # Make POST request with streaming
+    response = POOL_MANAGER.request(
+        method='POST',
+        url=XAI_URL,
+        headers={
+            'Authorization': f'Bearer {XAI_API_KEY}',
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream'
+        },
+        json={
+            'model': model,
+            'messages': [
+                {'role': 'user', 'content': prompt}
+            ],
+            'temperature': temperature,
+            'stream': True
+        },
+        preload_content=False,
+        retries=0
+    )
     try:
-        # Make POST request with streaming
-        response = POOL_MANAGER.request(
-            method='POST',
-            url=XAI_URL,
-            headers={
-                'Authorization': f'Bearer {XAI_API_KEY}',
-                'Content-Type': 'application/json',
-                'Accept': 'text/event-stream'
-            },
-            json={
-                'model': model,
-                'messages': [
-                    {'role': 'user', 'content': prompt}
-                ],
-                'temperature': temperature,
-                'stream': True
-            },
-            preload_content=False,
-            retries=0
-        )
         if response.status != 200:
             raise urllib3.exceptions.HTTPError(f'POST {model} failed with status {response.status}')
 

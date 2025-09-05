@@ -84,13 +84,20 @@ def main(argv=None):
 
     # Process the configuration
     try:
-        process_config(config, {})
+        for ix_item, item_text in enumerate(process_config_items(config, {})):
+            if ix_item != 0:
+                print()
+            print(item_text)
     except Exception as exc:
         print(f'Error: {exc}', file=sys.stderr)
         sys.exit(2)
 
 
-def process_config(config, variables, root_dir='.', is_first=True):
+def process_config(config, variables, root_dir='.'):
+    return '\n\n'.join(process_config_items(config, variables, root_dir))
+
+
+def process_config_items(config, variables, root_dir='.'):
     # Output the prompt items
     for item in config['items']:
         item_key = list(item.keys())[0]
@@ -109,23 +116,17 @@ def process_config(config, variables, root_dir='.', is_first=True):
         # Config item
         if item_key == 'config':
             config = schema_markdown.validate_type(CTXKIT_TYPES, 'CtxKitConfig', json.loads(_fetch_text(item_path)))
-            is_first = process_config(config, variables, os.path.dirname(item_path), is_first)
+            yield from process_config_items(config, variables, os.path.dirname(item_path))
 
         # File include item
         elif item_key == 'include':
-            if not is_first:
-                print()
-            print(_fetch_text(item_path))
+            yield _fetch_text(item_path)
 
         # File item
         elif item_key == 'file':
-            if not is_first:
-                print()
             file_text = _fetch_text(item_path)
-            print(f'<{item_path}>')
-            if file_text:
-                print(file_text)
-            print(f'</{item_path}>')
+            yield f'<{item_path}>\n{file_text}{"\n" if file_text else ""}</{item_path}>'
+
 
         # Directory item
         elif item_key == 'dir':
@@ -137,14 +138,9 @@ def process_config(config, variables, root_dir='.', is_first=True):
                 raise Exception(f'No files found, "{item_path}"')
 
             # Output the file text
-            for ix_file, file_path in enumerate(dir_files):
-                if not is_first or ix_file != 0:
-                    print()
+            for file_path in dir_files:
                 file_text = _fetch_text(file_path)
-                print(f'<{file_path}>')
-                if file_text:
-                    print(file_text)
-                print(f'</{file_path}>')
+                yield f'<{file_path}>\n{file_text}{"\n" if file_text else ""}</{file_path}>'
 
         # Variable definition item
         elif item_key == 'var':
@@ -152,22 +148,11 @@ def process_config(config, variables, root_dir='.', is_first=True):
 
         # Long message item
         elif item_key == 'long':
-            if not is_first:
-                print()
-            for message in item['long']:
-                print(_replace_variables(message, variables))
+            yield _replace_variables('\n'.join(item['long']), variables)
 
         # Message item
         else: # if item_key == 'message'
-            if not is_first:
-                print()
-            print(_replace_variables(item['message'], variables))
-
-        # Set not first
-        if is_first and item_key not in ('config', 'var'):
-            is_first = False
-
-    return is_first
+            yield _replace_variables(item['message'], variables)
 
 
 # Helper to determine if a path is a URL
@@ -180,8 +165,8 @@ _R_URL = re.compile(r'^[a-z]+:')
 # Helper to fetch a file or URL text
 def _fetch_text(path):
     if _is_url(path):
+        response = POOL_MANAGER.request(method='GET', url=path, retries=0)
         try:
-            response = POOL_MANAGER.request(method='GET', url=path, retries=0)
             if response.status != 200:
                 raise urllib3.exceptions.HTTPError(f'POST {path} failed with status {response.status}')
             return response.data.decode('utf-8').strip()
