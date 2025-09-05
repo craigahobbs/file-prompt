@@ -45,6 +45,8 @@ def main(argv=None):
                         help='define a variable (reference with "{{var}}")')
     parser.add_argument('--grok', metavar='MODEL',
                         help='pass stdin to the Grok API')
+    parser.add_argument('--temp', metavar='TEMP', type=float, default=0.7,
+                        help='the LLM temperature (default is 0.7)')
     args = parser.parse_args(args=argv)
 
     # Show configuration file format?
@@ -54,9 +56,9 @@ def main(argv=None):
 
     # Grok chat?
     if args.grok:
-        for chunk in grok_chat(args.grok, sys.stdin.read()):
+        for chunk in grok_chat(args.grok, sys.stdin.read(), temperature=args.temp):
             print(chunk, end='', flush=True)
-        print
+        print()
         return
 
     # Load the config file
