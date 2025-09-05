@@ -11,11 +11,11 @@ import json
 import os
 import re
 import sys
-import urllib.request
 
 import schema_markdown
+import urllib3
 
-from .grok import grok_chat
+from .grok import POOL_MANAGER, grok_chat
 
 
 def main(argv=None):
@@ -180,8 +180,13 @@ _R_URL = re.compile(r'^[a-z]+:')
 # Helper to fetch a file or URL text
 def _fetch_text(path):
     if _is_url(path):
-        with urllib.request.urlopen(path) as response:
-            return response.read().decode('utf-8').strip()
+        try:
+            response = POOL_MANAGER.request(method='GET', url=path, retries=0)
+            if response.status != 200:
+                raise urllib3.exceptions.HTTPError(f'POST {path} failed with status {response.status}')
+            return response.data.decode('utf-8').strip()
+        finally:
+            response.close()
     else:
         with open(path, 'r', encoding='utf-8') as file:
             return file.read().strip()
