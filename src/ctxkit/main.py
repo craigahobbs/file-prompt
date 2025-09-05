@@ -15,6 +15,8 @@ import urllib.request
 
 import schema_markdown
 
+from .grok import grok_chat
+
 
 def main(argv=None):
     """
@@ -41,11 +43,20 @@ def main(argv=None):
                         help='the maximum directory depth, default is 0 (infinite)')
     parser.add_argument('-v', '--var', nargs=2, metavar=('VAR', 'EXPR'), dest='items', action=TypedItemAction,
                         help='define a variable (reference with "{{var}}")')
+    parser.add_argument('--grok', metavar='MODEL',
+                        help='pass stdin to the Grok API')
     args = parser.parse_args(args=argv)
 
     # Show configuration file format?
     if args.config_help:
         print(CTXKIT_SMD.strip())
+        return
+
+    # Grok chat?
+    if args.grok:
+        for chunk in grok_chat(args.grok, sys.stdin.read()):
+            print(chunk, end='', flush=True)
+        print
         return
 
     # Load the config file
@@ -71,13 +82,13 @@ def main(argv=None):
 
     # Process the configuration
     try:
-        _process_config(config, {})
+        process_config(config, {})
     except Exception as exc:
         print(f'Error: {exc}', file=sys.stderr)
         sys.exit(2)
 
 
-def _process_config(config, variables, root_dir='.', is_first=True):
+def process_config(config, variables, root_dir='.', is_first=True):
     # Output the prompt items
     for item in config['items']:
         item_key = list(item.keys())[0]
@@ -96,7 +107,7 @@ def _process_config(config, variables, root_dir='.', is_first=True):
         # Config item
         if item_key == 'config':
             config = schema_markdown.validate_type(CTXKIT_TYPES, 'CtxKitConfig', json.loads(_fetch_text(item_path)))
-            is_first = _process_config(config, variables, os.path.dirname(item_path), is_first)
+            is_first = process_config(config, variables, os.path.dirname(item_path), is_first)
 
         # File include item
         elif item_key == 'include':
